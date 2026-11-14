@@ -21,8 +21,10 @@ float3 viewPos(float2 uv)
 
 float4 main(float2 uv : TEXCOORD0) : COLOR
 {
+	// No early return or if: the compiler made a real branch of it (ifc), and the Linux game's
+	// D3D -> OpenGL translation (ToGL) stopped the game with "GLSL translation error" on this
+	// shader — the branch is the suspect. The sky is kept open by a select at the end instead.
 	float depth = tex2D(DepthSampler, uv).r;
-	if (depth > 0.999) return float4(1, 1, 1, 1);
 	float3 p = viewPos(uv);
 
 	// the normal from the nearer neighbour on each axis (keeps edges clean)
@@ -35,7 +37,7 @@ float4 main(float2 uv : TEXCOORD0) : COLOR
 	float3 nc = cross(dy, dx);
 	float cl = length(nc);
 	float3 n = (cl > 1e-6) ? nc / cl : float3(0, 0, -1);
-	if (n.z > 0) n = -n;     // towards the camera
+	n = (n.z > 0) ? -n : n;  // towards the camera
 
 	// the radius on screen; a per-pixel turn of the pattern (the blur removes the noise)
 	float2 px = uv / float2(g_View.z, g_View.w);
@@ -63,6 +65,7 @@ float4 main(float2 uv : TEXCOORD0) : COLOR
 		occ += saturate(dot(n, v / max(dist, 0.001)) - g_Params.w) * fall;
 	}
 	float vis = saturate(1.0 - g_Params.y * occ / SAMPLES * 2.0);
-	if (!(vis == vis)) vis = 1.0;     // NaN: leave the pixel open
+	vis = (vis == vis) ? vis : 1.0;      // NaN: leave the pixel open
+	vis = (depth > 0.999) ? 1.0 : vis;   // sky / nothing: open
 	return float4(vis, vis, vis, 1);
 }
