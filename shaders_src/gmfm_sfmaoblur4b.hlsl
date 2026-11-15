@@ -11,6 +11,30 @@ sampler DepthSampler : register(s1);
 const float4 g_Params : register(c0);
 const float4 g_Tol    : register(c1);
 
+// (b0.2.7) The depth as the float target holds it: (view depth / far)^2. PACKED_DEPTH (the *_pk
+// shaders, Linux / macOS: no float target can be drawn into there): three 8-bit fog passes (half a
+// unit to 128 units, 2 units to 512, 8 units to 2048; past that, open as the sky), packed and then
+// smoothed into 16 bits by gmfm_depthsmooth (R = high byte, G = low byte of depth / far).
+// quantStep: the size of one step of the fog passes there, in units (0: float depth).
+#ifdef PACKED_DEPTH
+#define NORMAL_STEP 1.0
+float rawDepth(float2 uv)
+{
+	// smoothed into 16 bits by gmfm_depthsmooth: R = high byte, G = low byte of depth / far
+	float2 t = tex2D(DepthSampler, uv).rg;
+	float d = t.r + t.g / 255.0;
+	return d * d;
+}
+float quantStep(float dUnits, float far)
+{
+	return (dUnits < far / 64.0) ? far / (64.0 * 255.0) : ((dUnits < far / 16.0) ? far / (16.0 * 255.0) : far / (4.0 * 255.0));
+}
+#else
+#define NORMAL_STEP 1.0
+float rawDepth(float2 uv) { return tex2D(DepthSampler, uv).r; }
+float quantStep(float dUnits, float far) { return 0.0; }
+#endif
+
 static const float2 DISC[15] = {
 	float2(0.2329, 0.3995), float2(-0.4577, 0.7647), float2(0.4205, -0.5768), float2(-0.5215, 0.1854),
 	float2(0.0666, -0.5564), float2(-0.4112, -0.3311), float2(-0.9055, -0.0360), float2(0.5592, 0.3459),
@@ -25,7 +49,7 @@ float hash(float2 q)
 	return frac((p3.x + p3.y) * p3.z);
 }
 
-float depthAt(float2 uv) { return sqrt(max(tex2D(DepthSampler, uv).r, 0.0)) * g_Params.z; }
+float depthAt(float2 uv) { return sqrt(max(rawDepth(uv), 0.0)) * g_Params.z; }
 
 float4 main(float2 uv : TEXCOORD0) : COLOR
 {
