@@ -136,10 +136,17 @@ local FORMAT_R32F = IMAGE_FORMAT_R32F or 27
 -- 32-bit float, one channel: in a 16-bit one the depth of a flat surface went in steps, each
 -- step read as an edge, and a big render (3840 x 3152) was crossed by dark stripes and bands
 -- (measured in game: 46% of the frame darkened against 8% — the real contacts — with R32F)
+-- Linux / macOS (the D3D -> OpenGL layer, ToGL): R32F cannot be a render target there, the
+-- engine fell back to 24-bit RGB, which ToGL cannot make at all — "DXABSTRACT_BREAK_ON_ERROR"
+-- and the game closed as soon as the occlusion was switched on (a camera's "as the scene", the
+-- viewport). Four 32-bit float channels can: the same precision, the shaders read R only.
+local FORMAT_RGBA32F = IMAGE_FORMAT_RGBA32323232F or 29
+local DEPTH_FORMAT = system.IsWindows() and FORMAT_R32F or FORMAT_RGBA32F
+local DEPTH_NAME = system.IsWindows() and "speditor_aodepth32_" or "gmfm_aodepth128_"
 local function depthRT(w, h)
 	local key = w .. "x" .. h
-	depthRTs[key] = depthRTs[key] or GetRenderTargetEx("speditor_aodepth32_" .. key, w, h, RT_SIZE_LITERAL,
-		MATERIAL_RT_DEPTH_SEPARATE, 4 + 8, 0, FORMAT_R32F)
+	depthRTs[key] = depthRTs[key] or GetRenderTargetEx(DEPTH_NAME .. key, w, h, RT_SIZE_LITERAL,
+		MATERIAL_RT_DEPTH_SEPARATE, 4 + 8, 0, DEPTH_FORMAT)
 	return depthRTs[key]
 end
 local function aoRT(i, w, h)
