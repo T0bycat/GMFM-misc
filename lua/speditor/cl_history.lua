@@ -81,14 +81,24 @@ function C.BurstEdit(key, label, getBefore, after, restore)
 		bursts[key] = b
 	end
 	b.after = after
-
-	timer.Create("SPeditor_Burst_" .. key, 0.6, 1, function()
+	b.fire = function()
 		bursts[key] = nil
 		local before, aft = b.before, b.after
 		C.PushHistory(label,
 			function() restore(before) end,
 		function() restore(aft) end)
-	end)
+	end
+	timer.Create("SPeditor_Burst_" .. key, 0.6, 1, b.fire)
+end
+
+-- (b0.2.7) Push the series still waiting for their 0.6 s at once: before the playhead moves, so
+-- that auto key keys an edit at the frame where it was made (a slider moved and the timeline
+-- scrubbed right after keyed the edit at the new frame, or lost it)
+function C.FlushBursts()
+	for key, b in pairs(bursts) do
+		timer.Remove("SPeditor_Burst_" .. key)
+		b.fire()
+	end
 end
 
 -- An action on a pose that can be undone: snapshot before, action, snapshot after

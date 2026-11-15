@@ -271,6 +271,9 @@ function C.SendCameraFX(ent, fx, now, noHist)
 	fx = table.Copy(fx or {})
 	if not noHist then
 		C.lastCameraEdit = ent      -- auto key (SAeditor) keys this camera even when it is not selected
+		C.editedCam = C.editedCam or {}
+		C.editedCam[ent] = C.editedCam[ent] or {}
+		C.editedCam[ent].fx = true
 		local ref = C.Ref(ent)
 		C.BurstEdit("fx" .. ent:EntIndex(), "camera fx", function() return table.Copy(C.GetCameraFX(ent) or {}) end, fx, function(st)
 			local e = C.Deref(ref)
@@ -773,6 +776,10 @@ function C.SendCameraEdit(ent, field, value, now, noHist)
 	if not IsValid(ent) then return end
 	if not noHist then
 		C.lastCameraEdit = ent
+		-- (b0.2.7) the fields edited since the last auto key: it keys only them (SAeditor)
+		C.editedCam = C.editedCam or {}
+		C.editedCam[ent] = C.editedCam[ent] or {}
+		C.editedCam[ent][field] = true
 		local before = C.CameraField(ent, field) or value
 		local ref = C.Ref(ent)
 		C.BurstEdit("ce" .. ent:EntIndex() .. field, field == "fov" and "camera fov" or "camera motion", function() return before end, value, function(v)

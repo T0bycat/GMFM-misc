@@ -217,7 +217,8 @@ local function vp2Frozen(src, pw, ph)
 	end
 	-- on a change: anything dragged (gizmo, slider, camera) counts as one, the rest is compared
 	local SA = SPeditor.Component and SPeditor.Component("saeditor").SA
-	if C.gizmo.drag or input.IsMouseDown(MOUSE_LEFT) or (SA and SA.playing) then
+	-- (b0.2.7) and a navigation (the Secondary Viewport can be flown now)
+	if C.gizmo.drag or C.camMode or C.navCam or input.IsMouseDown(MOUSE_LEFT) or (SA and SA.playing) then
 		vp2.sig = nil
 		if not fastNow and now - vp2.at < VP2_BUSY then return true end
 		vp2.at = now

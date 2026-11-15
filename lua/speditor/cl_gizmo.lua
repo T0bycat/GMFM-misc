@@ -1011,6 +1011,23 @@ local function endDrag()
 		end
 	end
 	C.lastEditParts = { ent = d.ent, parts = table.concat(parts, ","), t = RealTime() }
+	-- (b0.2.7) a camera, light or effect dragged: which of its attributes changed — "a0" the place,
+	-- "a1" the turn (SA.ATTRS). Auto key keys only those: turning a camera set a key of its place too
+	if d.kind == "entity" and d.mode ~= "scale" then
+		local aux = {}
+		for _, it in ipairs(d.items) do
+			local e = it.ent or d.ent
+			if IsValid(e) and C.IsAux(e) and it.p0 and it.p1 then
+				local list = {}
+				if it.p0:DistToSqr(it.p1) > 1e-4 then list[#list + 1] = "a0" end
+				if it.a0 and it.a1 and (math.abs(math.AngleDifference(it.a0.p, it.a1.p)) > 0.01
+					or math.abs(math.AngleDifference(it.a0.y, it.a1.y)) > 0.01
+					or math.abs(math.AngleDifference(it.a0.r, it.a1.r)) > 0.01) then list[#list + 1] = "a1" end
+				if #list > 0 then aux[e] = table.concat(list, ",") end
+			end
+		end
+		C.lastEditAux = next(aux) and { map = aux, t = RealTime() } or nil
+	end
 	C.PushHistory(d.mode,
 		function() restore(false) end,
 	function() restore(true) end)
