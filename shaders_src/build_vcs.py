@@ -33,10 +33,20 @@ def vcs(bytecode, crc):
     return head + recs + struct.pack("<I", 0) + body
 
 
+# (b0.2.7) the shaders only Linux / macOS draw: their cmps made safe for the game's ToGL there
+# (fix_cmp.py: it writes a cmp out a component at a time without a copy of the destination)
+LINUX_ONLY = ("gmfm_depthpack", "gmfm_depthpack2", "gmfm_depthsmooth", "gmfm_depthsmooth2",
+              "gmfm_sfmao4b_pk", "gmfm_sfmaoblur4b_pk", "speditor_ao2_pk", "speditor_ao2_blur_pk")
+
 os.makedirs(OUT, exist_ok=True)
 for obj in sorted(glob.glob(os.path.join(HERE, "*.o"))):
     name = os.path.splitext(os.path.basename(obj))[0]
     code = open(obj, "rb").read()
+    if name in LINUX_ONLY:
+        import fix_cmp
+        code, n = fix_cmp.fix(code)
+        if n:
+            print(name, "cmps made safe:", n)
     src = os.path.join(HERE, name + ".hlsl")
     crc = zlib.crc32(open(src, "rb").read()) if os.path.exists(src) else 0
     suffix = "" if name.endswith(("_ps30", "_vs30")) else "_ps20b"

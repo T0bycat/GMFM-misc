@@ -15,16 +15,22 @@ const float4 g_View   : register(c1);
 // quantStep: the size of one step of the fog passes there, in units (0: float depth).
 #ifdef PACKED_DEPTH
 #define NORMAL_STEP 1.0
+// c3.xy (b0.2.7): a quarter of a texel. The depth is point sampled, and under the game's OpenGL
+// layer the quad's coordinates fall on the borders between texels: a lookup there took the row
+// above or below at random — rows doubled and skipped, the smoothing and the normals in steps
+// (measured: row-to-row depth 0, 3, 0, 2.5 … for an even 1.4). A quarter texel in is inside the
+// right one whether the coordinate sits on a border or a centre.
+const float4 g_Texel : register(c3);
 float rawDepth(float2 uv)
 {
 	// smoothed into 16 bits by gmfm_depthsmooth: R = high byte, G = low byte of depth / far
-	float2 t = tex2D(DepthSampler, uv).rg;
+	float2 t = tex2D(DepthSampler, uv + g_Texel.xy).rg;
 	float d = t.r + t.g / 255.0;
 	return d * d;
 }
 float quantStep(float dUnits, float far)
 {
-	return (dUnits < far / 64.0) ? far / (64.0 * 255.0) : ((dUnits < far / 16.0) ? far / (16.0 * 255.0) : far / (4.0 * 255.0));
+	return (dUnits < 0.9 * far / 64.0) ? far / (64.0 * 255.0) : ((dUnits < 0.9 * far / 16.0) ? far / (16.0 * 255.0) : far / (4.0 * 255.0));
 }
 #else
 #define NORMAL_STEP 1.0
@@ -87,7 +93,7 @@ float4 main(float2 uv : TEXCOORD0) : COLOR
 		float2 inside = step(0.0, su) * step(su, 1.0);
 		float fall = saturate(1.0 - dist / (g_Params.x * 1.5)) * inside.x * inside.y;
 		// packed depth (b0.2.7): what rises less than a step of the depth off the surface is not counted
-		occ += saturate(dot(n, v / max(dist, 0.001)) - g_Params.w - 1.5 * quantStep(q.z, g_Params.z) / max(dist, 0.001)) * fall;
+		occ += saturate(dot(n, v / max(dist, 0.001)) - g_Params.w - 0.5 * quantStep(q.z, g_Params.z) / max(dist, 0.001)) * fall;
 	}
 	float vis = saturate(1.0 - g_Params.y * occ / SAMPLES * 2.0);
 	vis = (vis == vis) ? vis : 1.0;      // NaN: leave the pixel open

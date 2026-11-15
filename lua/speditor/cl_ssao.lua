@@ -115,6 +115,11 @@ end
 -- game was still starting, they did not get the editor's shaders and drew nothing (white, no
 -- occlusion) for the whole session, in both modes (b0.2 round 6)
 local matAO, matBlur, matSfmAO, matSfmBlur, matPack, matPack2, matSmoothH, matSmoothV
+-- (b0.2.7) the packed depth's shaders sample a quarter texel in (c3.xy; shaders_src: g_Texel)
+local function texel(m, W, H)
+	m:SetFloat("$c3_x", 0.25 / W)
+	m:SetFloat("$c3_y", 0.25 / H)
+end
 -- (b0.2.7, Linux / macOS) The shaders of the packed depth and the occlusion, under the name that
 -- works this session (R.ShaderName, cl_render.lua: a shader drawn in one session there is dead in
 -- the next, so each also ships as a copy). The occlusion waits until they are known, and is off
@@ -289,13 +294,21 @@ local depthInto
 function R.RenderDepth(src, W, H, aspect)
 	if not PACKED then return depthInto(depthRT(W, H), src, W, H, aspect) end
 	ensureMats()
+	-- the tone mapping scale exactly 1 while the fog is drawn: the passes are white fog, and the
+	-- scale (auto exposure, a camera's exposure) dimmed it — 250 for 255, so every far pixel read as
+	-- one at the end of the nearest pass (measured on gm_construct after a few minutes: the whole
+	-- frame at 125 units, the occlusion in bands)
+	local tone = render.GetToneMappingScaleLinear and render.GetToneMappingScaleLinear()
+	render.SetToneMappingScaleLinear(Vector(1, 1, 1))
 	local bands = {}
 	for k, div in ipairs(BANDS) do
 		bandDiv = div
 		bands[k] = depthInto(bandRT(k, W, H), src, W, H, aspect)
 		bandDiv = 1
-		if not bands[k] then return nil end
+		if not bands[k] then break end
 	end
+	if tone then render.SetToneMappingScaleLinear(tone) end
+	if #bands < #BANDS then return nil end
 	local packed, mid, rt = bandRT(4, W, H), bandRT(5, W, H), depthRT(W, H)
 	local half = bandRT(6, W, H)
 	local function screenPass(target, mat)
@@ -308,16 +321,20 @@ function R.RenderDepth(src, W, H, aspect)
 	-- packed two textures at a time (gmfm_depthpack: a third sampler drew nothing in some sessions)
 	matPack:SetTexture("$basetexture", bands[1])
 	matPack:SetTexture("$texture1", bands[2])
+	texel(matPack, W, H)
 	screenPass(half, matPack)
 	matPack2:SetTexture("$basetexture", half)
 	matPack2:SetTexture("$texture1", bands[3])
+	texel(matPack2, W, H)
 	screenPass(packed, matPack2)
 	-- the steps of the bands smoothed into a 16-bit depth (gmfm_depthsmooth): across, then down
 	matSmoothH:SetTexture("$basetexture", packed)
 	matSmoothH:SetFloat("$c0_x", 1 / W) matSmoothH:SetFloat("$c0_y", 0) matSmoothH:SetFloat("$c0_z", SSAO_FAR)
+	texel(matSmoothH, W, H)
 	screenPass(mid, matSmoothH)
 	matSmoothV:SetTexture("$basetexture", mid)
 	matSmoothV:SetFloat("$c0_x", 0) matSmoothV:SetFloat("$c0_y", 1 / H) matSmoothV:SetFloat("$c0_z", SSAO_FAR)
+	texel(matSmoothV, W, H)
 	screenPass(rt, matSmoothV)
 	return rt
 end
@@ -413,6 +430,7 @@ function R.SSAOMask(src, W, H, aspect, passes, seed)
 		m:SetFloat("$c1_y", tx / aspect)
 		m:SetFloat("$c1_z", 1 / W)
 		m:SetFloat("$c1_w", 1 / H)
+		texel(m, W, H)
 		passes = math.Clamp(math.floor(passes or 1), 1, 64)
 		local sx, sy = seedOf(seed)
 		if passes <= 1 then
@@ -464,6 +482,7 @@ function R.SSAOMask(src, W, H, aspect, passes, seed)
 		matSfmBlur:SetFloat("$c1_x", 0.02)
 		matSfmBlur:SetFloat("$c1_y", sx)
 		matSfmBlur:SetFloat("$c1_z", sy)
+		texel(matSfmBlur, W, H)
 		pass(a, matSfmBlur)
 		R.lastAO, R.lastDepth = a, depth
 		return a
@@ -479,10 +498,12 @@ function R.SSAOMask(src, W, H, aspect, passes, seed)
 	matAO:SetFloat("$c1_y", tx / aspect)
 	matAO:SetFloat("$c1_z", 1 / W)
 	matAO:SetFloat("$c1_w", 1 / H)
+	texel(matAO, W, H)
 	pass(a, matAO)
 
 	matBlur:SetTexture("$texture1", depth)
 	matBlur:SetFloat("$c0_z", SSAO_FAR)
+	texel(matBlur, W, H)
 	matBlur:SetFloat("$c0_w", radius)
 	matBlur:SetTexture("$basetexture", a)
 	matBlur:SetFloat("$c0_x", 1 / W) matBlur:SetFloat("$c0_y", 0)

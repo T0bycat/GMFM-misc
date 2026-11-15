@@ -834,7 +834,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 		local movedAux = C.lastEditAux
 		if not (movedAux and RealTime() - movedAux.t < 0.5) then movedAux = nil end
 		C.lastEditAux = nil
-		later("SAeditor.AutoKeyRec", 0.15, function()
+		later("SAeditor.AutoKeyRec", 0.05, function()
 			if not C.active then pendingCams = {} return end
 			local rec, seen, edited = {}, {}, {}
 			for _, e in ipairs(takeCams()) do
@@ -864,7 +864,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 	C.lastEditAux = nil
 	local moved = C.lastEditParts
 	if not (moved and RealTime() - moved.t < 0.5 and IsValid(moved.ent) and moved.parts ~= "") then moved = nil end
-	later("SAeditor.AutoKey", 0.15, function()
+	later("SAeditor.AutoKey", 0.05, function()
 		if not C.active then pendingCams = {} return end
 		local body, face, seen = {}, {}, {}
 		for _, e in ipairs(C.SelectionList()) do
@@ -964,7 +964,7 @@ COMP:Hook("SPeditor_HistoryStep", function(label)
 	for _, e in ipairs(C.SelectionList()) do
 		if (SA.autokey or C.CameraRecords(e)) and SA.HasKey(SA.UID(e), frame) then list[#list + 1] = e end
 	end
-	if #list > 0 then later("SAeditor.AutoKey", 0.15, function() SA.SetKey(list, frame, true) end) end
+	if #list > 0 then later("SAeditor.AutoKey", 0.05, function() SA.SetKey(list, frame, true) end) end
 end, "autokey")
 
 ---------------------------------------------------------------------
