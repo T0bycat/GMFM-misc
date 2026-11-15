@@ -2,6 +2,24 @@
 
 <h1 align="center">GM:FM — Garry's Mod Filmmaker</h1>
 
+> **This is GMFM-Misc, an unofficial fork** of [DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM).
+> It is not the Workshop version. Report problems with this fork in
+> [its own issues](https://github.com/T0bycat/GMFM-misc/issues), not upstream.
+>
+> What the fork changes:
+> - **Linux / macOS:** SSAO and film grain no longer close the game. The shaders were rebuilt
+>   without the branches the Linux shader translation refused, and the SSAO depth target uses
+>   a float format that the Linux game can render to. `gmfm_shadertest` tests the editor's
+>   shaders one by one.
+> - **Timeline:** double-click a track to open it out into a row per moving bone, face slider,
+>   or camera / light / effect attribute, and move those keys on their own. Drag over empty
+>   space to select keys in a box.
+> - **Auto key:** it keys only what you changed (the moved bones, the face sliders, the camera's
+>   field of view…), keys camera fields reliably, and keys an edit at its own frame even when
+>   you scrub right after it. A camera's "Record moves" no longer sets a key when you pause.
+>
+> Everything below is the upstream README.
+
 <p align="center">
 Scenes, animation and film inside Garry's Mod, close to a full port of Source Filmmaker. Called SPeditor until b0.1.<br>
 Сцены, анимация и кино прямо в Garry's Mod — почти полный порт Source Filmmaker. До b0.1 назывался SPeditor.
