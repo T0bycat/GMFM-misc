@@ -4,7 +4,7 @@ the timeline), the "Import model animation" and "Render animation" windows, menu
 
 Timeline: names of animated objects on the left, the frame ruler and keys on the right;
 below the objects — the sounds: one row per file and source, a bar for every time it plays.
-  LMB on the ruler or empty space — move the playhead (can be dragged);
+  LMB on the ruler — move the playhead (can be dragged), on empty space — go to that frame;
   LMB on a key — select it, drag — move it (with Ctrl — copy it); Ctrl+click — add a key to the
   selection or take it out; drag over empty space — select the keys in a box (Ctrl / Shift: add to
   the selection; a click without a drag goes to that frame); the selected
@@ -1613,6 +1613,12 @@ local function buildTimeline(page)
 				return
 			elseif code == MOUSE_LEFT and shift then
 				drag = { kind = "tselnew", from = round(inAnim(frameAt(mx, w))) }
+				s:MouseCapture(true)
+				return
+			elseif code == MOUSE_LEFT then
+				-- the frame numbers: press and drag the playhead (the key selection stays)
+				drag = { kind = "scrub" }
+				SA.Seek(round(frameAt(mx, w)))
 				s:MouseCapture(true)
 				return
 			end
