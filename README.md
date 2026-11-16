@@ -1,122 +1,123 @@
 <p align="center"><img src="materials/speditor/icon128.png" width="96" alt="GM:FM"></p>
 
-<h1 align="center">GM:FM — Garry's Mod Filmmaker</h1>
-
-> **This is GMFM-Misc, an unofficial fork** of [DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM).
-> It is not the Workshop version. Report problems with this fork in
-> [its own issues](https://github.com/T0bycat/GMFM-misc/issues), not upstream.
->
-> What the fork changes:
-> - **Linux / macOS:** SSAO and film grain no longer close the game. The shaders were rebuilt
->   without the branches the Linux shader translation refused, and the SSAO depth target uses
->   a float format that the Linux game can render to. `gmfm_shadertest` tests the editor's
->   shaders one by one.
-> - **Timeline:** double-click a track to open it out into a row per moving bone, face slider,
->   or camera / light / effect attribute, and move those keys on their own. Drag over empty
->   space to select keys in a box.
-> - **Auto key:** it keys only what you changed (the moved bones, the face sliders, the camera's
->   field of view…), keys camera fields reliably, and keys an edit at its own frame even when
->   you scrub right after it. A camera's "Record moves" no longer sets a key when you pause.
->
-> Everything below is the upstream README.
+<h1 align="center">GMFM-Misc</h1>
 
 <p align="center">
-Scenes, animation and film inside Garry's Mod, close to a full port of Source Filmmaker. Called SPeditor until b0.1.<br>
-Сцены, анимация и кино прямо в Garry's Mod — почти полный порт Source Filmmaker. До b0.1 назывался SPeditor.
+Random improvements to <a href="https://github.com/DikiyChuvak/GMFM">GM:FM — Garry's Mod Filmmaker</a>.<br>
+An unofficial fork of DikiyChuvak/GMFM, based on b0.2.6.
 </p>
 
 <p align="center">
-<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435"><b>Steam Workshop</b></a> ·
-<a href="https://github.com/DikiyChuvak/GMFM/issues">Issues</a> ·
+<a href="https://github.com/T0bycat/GMFM-misc/issues"><b>Issues (this fork)</b></a> ·
+<a href="https://github.com/DikiyChuvak/GMFM">Upstream GM:FM</a> ·
+<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435">Original on the Workshop</a> ·
 <a href="LICENSE">MIT</a>
 </p>
 
 <p align="center"><img src="materials/speditor/help/overview.jpg" alt="GM:FM editor"></p>
 
-## English
+GM:FM is DikiyChuvak's scene, animation and film editor for Garry's Mod, close to a full port
+of Source Filmmaker. GMFM-Misc takes it as a base and adds fixes and features as they come
+up: Linux support, the timeline, auto key, posing. It is **not** the Workshop version, and the
+upstream author doesn't support it. Report problems with it
+[here](https://github.com/T0bycat/GMFM-misc/issues), not upstream.
 
-*The whole source code of GM:FM is open under the MIT license. Fork it, or dig into it if you
-are an enthusiast. Changes from other developers may get into the Workshop version (always
-credited) — message me on Steam first so I can look at what you have changed. The Simplified
-Chinese translation is by [fugui9527121](https://github.com/fugui9527121) — thank you!*
+How to use the editor is explained inside the game: **Help → How to use**.
 
-This repository is the **full source code** of GM:FM b0.2.6 — the addon as it is on the
-[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435), its
-gamemode, shaders and tools. How to use the editor is explained inside the game: **Help → How
-to use** (illustrated guides with live demonstrations).
+## What's different from upstream
 
-### Run it from the source
+### Linux
+- SSAO and film grain no longer close the game. The shaders were rebuilt without the branches
+  the Linux shader translation refused.
+- The render targets the Linux game can't draw to were replaced: SSAO reads depth packed into
+  8-bit passes, and the shaders also ship under a second name that the Linux game loads.
+- SSAO depth on Linux is smoothed without banding on most surfaces. Floors seen at a grazing
+  angle can still show faint bands.
+- `gmfm_shadertest` and `gmfm_rendertest` test the editor's shaders and render targets one by one.
 
-1. Unsubscribe from GM:FM on the Workshop (two copies of the addon would clash).
-2. Clone or unpack this repository into `garrysmod/addons/speditor` — the folder **must** be
-   called `speditor` (the shader folder and the theme folder are looked for there).
-3. Start Garry's Mod. Sandbox: C menu → GM:FM, or `gmfm_toggle`. The gamemode: Start New Game
-   → gamemode **GM:FM**.
+### Timeline
+- Double-click a track to open it out into a row per moving bone, face slider, or camera /
+  light / effect attribute (FOV, colour…). A key dragged on one of those rows moves only that part.
+- Drag over empty space to box-select keys (no Shift needed). **X** deletes the selected keys.
+- Press and drag on the frame numbers to scrub the playhead.
 
-Lua autorefresh works for the files in `lua/`; a new file is picked up after
+### Auto key
+- Keys only what you changed: the moved bones, the edited face sliders, the camera's or
+  light's edited attribute.
+- A slider is keyed as soon as you let it go. A camera field edit is no longer lost to the next
+  edit, and an edit is keyed at its own frame even if you scrub right after it.
+- A camera's **Record moves** no longer sets a key when playback pauses.
+- The editors work with these partial keys: the Graph Editor draws and edits each channel
+  between the keys that hold it, and the Motion Editor, presets and Camera Smooth handle them too.
+- The Bone keys toggle is gone: **K** always keys the whole pose. A single bone's key is on its
+  row's right-click menu.
+
+### Auto pose
+- **View → Auto pose** (`gmfm_autopose`): pull a ragdoll's hand past the arm's reach and the
+  body follows. The torso bends and turns toward the hand, then the body steps along the floor
+  or down into a crouch. Planted feet and hands stay where they are.
+- `gmfm_autopose_follow 0..1` sets how much the body follows.
+
+### Viewports
+- Right / middle / Alt navigation in the Secondary Viewport flies the camera it shows, keyed
+  as in the Primary.
+
+## Install
+
+1. Unsubscribe from GM:FM on the Workshop. Two copies of the addon clash.
+2. Clone this repository into `garrysmod/addons/` as a folder called **`speditor`**. The name
+   matters, because the shaders and themes are looked for there:
+
+   ```
+   cd "<Steam>/steamapps/common/GarrysMod/garrysmod/addons"
+   git clone https://github.com/T0bycat/GMFM-misc.git speditor
+   ```
+
+3. Start Garry's Mod. In Sandbox: C menu → GM:FM, or `gmfm_toggle`. For the gamemode: Start New
+   Game → **GM:FM**.
+
+Lua autorefresh works for the files in `lua/`. A new file is picked up after
 `lua/autorun/speditor_init.lua` is touched.
 
-### What is where
+## What is where
 
 | Path | What |
 |---|---|
 | `lua/autorun/speditor_init.lua` | loads everything: the lists `SHARED`, `SERVER_FILES`, `CLIENT_FILES` |
 | `lua/speditor/sh_*.lua` | shared: settings (`sh_config`), languages (`sh_lang`), errors and reports, components |
 | `lua/speditor/sv_*.lua` | server: objects, scenes, adopting map objects, PAC3, the Environment, the gamemode |
-| `lua/speditor/cl_*.lua` | client: camera, gizmo, IK, rig, render (`cl_render`, `cl_export`, `cl_ssao`, `cl_postfx`), lights, effects, the whole interface (`cl_ui_*`), guides, self-test |
-| `lua/speditor/saeditor/` | SAeditor — the animation component: tracks and keys, timeline, graph editor, sounds and lip sync, recorder, video |
+| `lua/speditor/cl_*.lua` | client: camera, gizmo, IK and auto pose, rig, render (`cl_render`, `cl_export`, `cl_ssao`, `cl_postfx`), lights, effects, the interface (`cl_ui_*`), guides, self-test |
+| `lua/speditor/saeditor/` | SAeditor, the animation component: tracks and keys, timeline, graph editor, sounds and lip sync, recorder, video |
 | `lua/speditor/skins/` | Derma skins of the themes (GM:FM UI is `sfm.lua`) |
 | `lua/entities/` | the editor's lights, cameras and effects |
 | `gamemodes/gmfm/` | the GM:FM gamemode |
 | `materials/`, `sound/`, `data_static/` | pictures, interface sounds, example scenes |
 | `shaders_src/` → `shaders/fxc/` | HLSL sources of the SSAO, grain and colour correction shaders and their compiled `.vcs` (`shaders_src/build_vcs.py`; compile with `fxc /T ps_2_b`) |
-| `tools/` | `build_gma.py` (the Workshop package), picture generators |
+| `tools/` | `build_gma.py` (the addon package), picture generators |
 
-### Build the Workshop package
+### Build a package
 
-`python3 tools/build_gma.py out.gma` — writes the GMA itself (the game's Linux `gmad` refuses
+`python3 tools/build_gma.py out.gma` writes the GMA itself (the game's Linux `gmad` refuses
 `shaders/fxc/*.vcs`), skipping what `addon.json` → `ignore` lists.
 
-### Contributing
+## Contributing
 
-Fork, change, open a pull request — and message me on Steam
-([DikiyChuvak](https://steamcommunity.com/profiles/76561199542870153)) so I see it. Changes
-that get into the Workshop version are credited by name. Bugs and ideas: the
-[issues](https://github.com/DikiyChuvak/GMFM/issues) or the
-[Workshop discussions](https://steamcommunity.com/workshop/filedetails/discussion/3817852435/567048683131023614/).
+Issues and pull requests for this fork go to
+[T0bycat/GMFM-misc](https://github.com/T0bycat/GMFM-misc). For the official GM:FM, see
+[DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM) and its
+[Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435).
+
+## Credits
+
+GM:FM is made by [DikiyChuvak](https://github.com/DikiyChuvak). The Simplified Chinese
+translation is by [fugui9527121](https://github.com/fugui9527121). GMFM-Misc only adds to their work.
 
 ## Русский
 
-*Весь исходный код GM:FM открыт под лицензией MIT. Делайте форки или копайтесь в нём, если
-вы энтузиаст. Изменения других разработчиков могут попасть в версию мастерской (всегда с
-упоминанием авторов) — напишите мне в личные сообщения Steam, чтобы я мог посмотреть, что вы
-изменили. Перевод на упрощённый китайский — [fugui9527121](https://github.com/fugui9527121), спасибо!*
-
-Здесь лежит **полный исходный код** GM:FM b0.2.6 — аддон в том виде, в каком он в
-[мастерской Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435), его
-режим игры, шейдеры и инструменты. Как пользоваться редактором — внутри игры: **Help → How
-to use** (руководства с картинками и живыми демонстрациями).
-
-### Запуск из исходников
-
-1. Отпишитесь от GM:FM в мастерской (две копии аддона будут мешать друг другу).
-2. Склонируйте или распакуйте репозиторий в `garrysmod/addons/speditor` — папка **должна**
-   называться `speditor` (там ищутся папки шейдеров и тем).
-3. Запустите Garry's Mod. Sandbox: меню C → GM:FM или `gmfm_toggle`. Режим: «Новая игра» →
-   режим **GM:FM**.
-
-Автообновление Lua работает для файлов в `lua/`; новый файл подхватывается после того, как
-изменён `lua/autorun/speditor_init.lua`.
-
-Что где лежит — в таблице выше. Пакет для мастерской: `python3 tools/build_gma.py out.gma`.
-
-### Участие
-
-Форк, изменения, pull request — и напишите мне в Steam
-([DikiyChuvak](https://steamcommunity.com/profiles/76561199542870153)), чтобы я увидел.
-Изменения, попавшие в версию мастерской, подписываются именем автора. Ошибки и идеи —
-[issues](https://github.com/DikiyChuvak/GMFM/issues) или
-[обсуждения мастерской](https://steamcommunity.com/workshop/filedetails/discussion/3817852435/567048683131023614/).
+GMFM-Misc — неофициальный форк [GM:FM](https://github.com/DikiyChuvak/GMFM) (на основе
+b0.2.6) с разными исправлениями и дополнениями. Это не версия из мастерской Steam. Об ошибках
+этого форка пишите [сюда](https://github.com/T0bycat/GMFM-misc/issues), а не автору GM:FM.
+Полное описание на русском — в [README оригинала](https://github.com/DikiyChuvak/GMFM#русский).
 
 ## License / Лицензия
 
