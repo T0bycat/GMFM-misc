@@ -475,6 +475,72 @@ function UI.ShowRenderDone(info)
 end
 
 ---------------------------------------------------------------------
+-- Native Linux (GMFM-Misc): the game's Linux build draws the editor's effects through its own
+-- shader translation, and small differences remain; under Proton the Windows build runs
+-- (system.IsWindows() is true there, so this never shows). Once a session, when the editor opens,
+-- until "Don't warn me again" (gmfm_linux_notice 0). gmfm_linux_notice_show opens it anywhere.
+---------------------------------------------------------------------
+local cvLinuxNotice = CreateClientConVar("gmfm_linux_notice", "1", true, false,
+	"Native Linux: recommend running Garry's Mod through Proton when the editor opens")
+local linuxNoticeShown = false
+function UI.ShowLinuxNotice()
+	local old = Dock.ByKey("linuxnotice")
+	if IsValid(old) then old:Remove() end
+	local W = 520
+	local win, body = Dock.Create({ key = "linuxnotice", id = "linuxnotice", title = L("linux_title"), w = W, h = 250,
+			x = math.floor(ScrW() / 2 - W / 2), y = 160, dockable = false, icon = "icon16/information.png" })
+	win.minW, win.minH = UI.S(420), UI.S(220)
+	local baseRemove = win.OnRemove
+	win.OnRemove = function(s)
+		if baseRemove then baseRemove(s) end
+		Dock.pages.linuxnotice = nil
+	end
+
+	local foot = vgui.Create("DPanel", body)
+	foot:Dock(BOTTOM)
+	foot:SetTall(UI.S(34))
+	foot.Paint = function() end
+	local ok = vgui.Create("DButton", foot)
+	ok:Dock(RIGHT)
+	ok:DockMargin(4, 5, 8, 5)
+	ok:SetWide(UI.S(90))
+	ok:SetText(L("linux_ok"))
+	UI.StyleButton(ok, true, 3)
+	ok.DoClick = function() win:Remove() end
+	local never = vgui.Create("DButton", foot)
+	never:Dock(RIGHT)
+	never:DockMargin(4, 5, 4, 5)
+	never:SetWide(UI.S(170))
+	never:SetText(L("linux_never"))
+	UI.StyleButton(never, nil, 3)
+	never.DoClick = function()
+		cvLinuxNotice:SetBool(false)
+		win:Remove()
+	end
+
+	local scroll = vgui.Create("DScrollPanel", body)
+	scroll:Dock(FILL)
+	scroll.Paint = function(_, w, h)
+		surface.SetDrawColor(COL.BG)
+		surface.DrawRect(0, 0, w, h)
+	end
+	text(scroll, L("linux_text"), COL.TEXT, nil, 10)
+	text(scroll, L("linux_how"), COL.ORANGE, nil, 10)
+	return win
+end
+
+SPeditor.Hook("SPeditor_StateChanged", "GMFM.LinuxNotice", function(on)
+	if not on or linuxNoticeShown or not system.IsLinux() or not cvLinuxNotice:GetBool() then return end
+	linuxNoticeShown = true
+	-- after the editor's own windows are built, so it opens over them
+	timer.Simple(1, function()
+		if C.active then UI.ShowLinuxNotice() end
+	end)
+end)
+
+concommand.Add("gmfm_linux_notice_show", function() UI.ShowLinuxNotice() end)
+
+---------------------------------------------------------------------
 -- Work camera settings
 ---------------------------------------------------------------------
 function UI.OpenCameraSettings()
