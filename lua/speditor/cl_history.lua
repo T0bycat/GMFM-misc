@@ -72,9 +72,11 @@ end
 
 -- Merging a series of quick edits (sliders) into one history entry.
 -- getBefore() is called only on the first edit of a series; restore(state) sends the state to the server.
+-- onFire(before, after) (b0.2.7, optional) runs just before the entry goes into the history: the
+-- finger poser tells auto key there which bones changed (C.lastEditParts).
 local bursts = {}
 
-function C.BurstEdit(key, label, getBefore, after, restore)
+function C.BurstEdit(key, label, getBefore, after, restore, onFire)
 	local b = bursts[key]
 	if not b then
 		b = { before = getBefore() }
@@ -84,11 +86,21 @@ function C.BurstEdit(key, label, getBefore, after, restore)
 	b.fire = function()
 		bursts[key] = nil
 		local before, aft = b.before, b.after
+		if onFire then onFire(before, aft) end
 		C.PushHistory(label,
 			function() restore(before) end,
 		function() restore(aft) end)
 	end
-	timer.Create("SPeditor_Burst_" .. key, 0.6, 1, b.fire)
+	-- (b0.2.7) one gesture, one entry: while the mouse button is still held (a slider dragged
+	-- with a pause in it) the series waits for the release instead of splitting in two
+	-- (a repeating timer, so the callback never has to make its own timer again)
+	local name = "SPeditor_Burst_" .. key
+	timer.Create(name, 0.6, 0, function()
+		if bursts[key] ~= b then timer.Remove(name) return end
+		if input.IsMouseDown(MOUSE_LEFT) then return end
+		timer.Remove(name)
+		b.fire()
+	end)
 end
 
 -- (b0.2.7) Push the series still waiting for their 0.6 s at once: before the playhead moves, so

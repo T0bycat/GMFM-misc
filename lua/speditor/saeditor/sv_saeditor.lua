@@ -3468,6 +3468,23 @@ local function sendCurve(ply, uid, part)
 			end
 		end
 	end
+	-- (b0.2.7) the part each channel is (a bone's or a body's curves: that bone; a camera's x y z:
+	-- "a0"…), so that deleting or moving a key in the Graph Editor takes that part only, as on the
+	-- bone's row of the timeline. Not for an object's own curves: its row's key is the whole key.
+	if out.chans and tr and IsValid(ent) then
+		local kind, idx = partOf(ent, part)
+		local ak = kind == "root" and auxKind(ent)
+		if kind ~= "root" or ak then
+			-- (an object's root has no index: pid only for a bone or a body)
+			local pid = kind ~= "root" and ((kind == "phys") and ("p" .. idx) or ("b" .. idx)) or nil
+			local cp = {}
+			for c, ch in ipairs(out.chans) do
+				local i = ak and CH_ATTR[ch] and SA.AttrIndex(ak, CH_ATTR[ch])
+				cp[c] = i and ("a" .. i) or pid or ""
+			end
+			out.cp = table.concat(cp, ",")
+		end
+	end
 	out.keys = SA.ToPages(out.keys)
 	SA.SendParts(ply, "CurveData", out)
 end

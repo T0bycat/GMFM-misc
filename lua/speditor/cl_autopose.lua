@@ -22,7 +22,13 @@ local C  = SPeditor.Client
 local cvAuto   = CreateClientConVar("gmfm_autopose", "0", true, false, "Auto pose: a dragged hand takes the body along (0/1)", 0, 1)
 local cvFollow = CreateClientConVar("gmfm_autopose_follow", "1", true, false, "Auto pose: how much the body follows the hand (0..1)", 0, 1)
 function C.AutoPoseOn() return cvAuto:GetBool() end
-function C.SetAutoPose(on) RunConsoleCommand("gmfm_autopose", on and "1" or "0") end
+-- (b0.2.7) Auto pose works through IK (a hand's chain): turning it on turns IK on too
+function C.SetAutoPose(on)
+	RunConsoleCommand("gmfm_autopose", on and "1" or "0")
+	if on and C.SetIK and not (C.gizmo and C.gizmo.ik) then C.SetIK(true) end
+end
+-- what the viewport shows: Auto pose that will act (IK or the rig is on)
+function C.AutoPoseActive() return cvAuto:GetBool() and C.gizmo and (C.gizmo.ik or (C.RigOn and C.RigOn())) or false end
 
 -- the share of the arm's full length where the body starts to help (a straight arm looks stiff)
 local COMFORT = 0.88
@@ -35,6 +41,9 @@ local MAX_STEP, MAX_CROUCH, MAX_RISE = 0.35, 0.6, 0.1
 local ITERATIONS = 8
 -- the share of the arm's length where the hand starts to ease in (soft IK)
 local SOFT = 0.1
+-- (b0.2.7) how much of its turn in the world the head keeps while the chest bends under it (the
+-- eyes stay on what they looked at, as a person reaching does; 0 — it turns with the chest)
+local HEAD_KEEP = 0.6
 
 local FOOT = { "foot", "ankle", "hoof" }
 local HAND = { "hand", "wrist", "paw" }
@@ -180,6 +189,17 @@ function AP.Begin(ent, hand, shoulder, elbow)
 			if isBelow(ent, b, t.bone) then t.list[#t.list + 1] = it end
 		end
 	end
+	-- the head (a body named head on the torso, not on the arm): it keeps its turn, with what is below it
+	local head
+	for b, it in pairs(byBone) do
+		if not head and named(ent, b, { "head" }) and isBelow(ent, b, torso[#torso].bone)
+			and not isBelow(ent, b, shoulder) and not isBelow(ent, shoulder, b) then
+			head = { it = it, list = {} }
+			for b2, it2 in pairs(byBone) do
+				if isBelow(ent, b2, b) then head.list[#head.list + 1] = it2 end
+			end
+		end
+	end
 	-- what hangs below the hand (rare: a weapon body) goes with it
 	local below = {}
 	for b, it in pairs(byBone) do
@@ -188,7 +208,7 @@ function AP.Begin(ent, hand, shoulder, elbow)
 	-- the elbow's way of bending, in the shoulder's frame: it turns with the chest
 	local bend = bendOf(S.p0, F.p0, H.p0)
 	local elbowPole = bend and WorldToLocal(bend, angle_zero, vector_origin, S.a0) or nil
-	local st = { ent = ent, items = items, S = S, F = F, H = H, torso = torso, below = below, elbowPole = elbowPole,
+	local st = { ent = ent, items = items, S = S, F = F, H = H, torso = torso, below = below, elbowPole = elbowPole, head = head,
 		l1 = S.p0:Distance(F.p0), l2 = F.p0:Distance(H.p0),
 		planted = plantedLimbs(ent, byBone, hand, C.gizmo.ikFeet, C.gizmo.ikHands) }
 	-- a leg's length (the step of the root): thigh to foot of the first planted foot
@@ -229,6 +249,21 @@ function AP.Solve(st, target)
 					end
 				end
 				toT = target - S.p1
+			end
+		end
+		-- the head turns back toward where it looked (round its own joint: the neck keeps its length)
+		local hd = st.head
+		if hd and HEAD_KEEP > 0 then
+			local a0, a1 = hd.it.a0, hd.it.a1
+			local f0, u0, f1, u1 = a0:Forward(), a0:Up(), a1:Forward(), a1:Up()
+			local l0, l1 = u0:Cross(f0), u1:Cross(f1)
+			-- the turn from now back to the start, as an axis and an angle
+			local ax = f1:Cross(f0) + l1:Cross(l0) + u1:Cross(u0)
+			local tr = f1:Dot(f0) + l1:Dot(l0) + u1:Dot(u0)
+			local s2 = ax:Length()
+			if s2 > 1e-6 then
+				local deg = math.deg(math.atan2(s2, tr - 1)) * HEAD_KEEP * follow
+				turnAround(hd.list, hd.it.p1, ax / s2, deg)
 			end
 		end
 		-- still out of reach: the whole body steps toward the hand (the feet stay, the legs bend):

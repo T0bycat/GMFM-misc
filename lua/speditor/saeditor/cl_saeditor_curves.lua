@@ -158,6 +158,15 @@ SA.ReceiveParts("CurveData", function(t)
 		k.chE = chE
 	end
 	CV.data.chKeys = chKeys
+	-- (b0.2.7) the part of each channel (nil: the object's own curves, whose keys are whole keys)
+	if isstring(t.cp) and t.cp ~= "" then
+		CV.data.cp = {}
+		local c = 0
+		for p in string.gmatch(t.cp .. ",", "([^,]*),") do
+			c = c + 1
+			CV.data.cp[c] = p ~= "" and p or nil
+		end
+	end
 	-- the drag in progress keeps its own value
 	if CV.drag and CV.drag.kind == "value" then
 		for _, k in ipairs(CV.data.keys) do
@@ -668,6 +677,27 @@ function SA.BuildCurves(body)
 
 	graph.PickAt = pick           -- what is at a point of the graph (scripts and tests)
 
+	-- (b0.2.7) the part a channel's keys are: deleting or moving one takes that part out of the
+	-- key and leaves the rest (a bone's curve key used to delete every bone's key at that frame)
+	local function partOfChan(c)
+		local cp = CV.data and CV.data.cp
+		if not cp then return nil end
+		-- a bone's curves: the parts of its row on the timeline (its body and its offset)
+		if CV.part and CV.part >= 0 and SA.BoneParts then
+			local ent, uid = currentTarget()
+			if IsValid(ent) and uid == CV.uid then return SA.BoneParts(ent, CV.part) end
+		end
+		return c and cp[c] or nil
+	end
+	local function deleteKey(f, c)
+		local p = partOfChan(c)
+		if p then SA.DeleteKeys({ { uid = CV.uid, f = f, parts = p } }) else SA.DeleteKey(CV.uid, f) end
+	end
+	local function moveKey(f, to, c)
+		local p = partOfChan(c)
+		if p then SA.MoveKeys({ { uid = CV.uid, f = f, parts = p } }, to - f) else SA.MoveKey(CV.uid, f, to) end
+	end
+
 	local function keyMenu(k)
 		local m = UI.Menu()
 		local uid = CV.uid
@@ -677,7 +707,8 @@ function SA.BuildCurves(body)
 		end
 		if k.e == "bezier" then em:AddOption(L("sa_ease_bezier")):SetChecked(true) end
 		m:AddOption(L("sa_crv_goto"), function() SA.Seek(k.f) end)
-		m:AddOption(L("sa_key_delete"), function() SA.DeleteKey(uid, k.f) sel = nil end):SetIcon("icon16/key_delete.png")
+		local c = sel and sel.c
+		m:AddOption(L("sa_key_delete"), function() deleteKey(k.f, c) sel = nil end):SetIcon("icon16/key_delete.png")
 		m:Open()
 	end
 
@@ -788,7 +819,7 @@ function SA.BuildCurves(body)
 			SA.PushOpHistory("sa curve", d.id)
 		elseif d.kind == "time" then
 			if d.to ~= d.f then
-				SA.MoveKey(CV.uid, d.f, d.to)
+				moveKey(d.f, d.to, d.c)
 				if sel then sel.f = d.to end
 			end
 		elseif d.kind == "handle" then
