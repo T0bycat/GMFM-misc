@@ -27,6 +27,13 @@ How to use the editor is explained inside the game: **Help → How to use**.
 ## What's different from upstream
 
 ### Linux
+
+> **On Linux, we recommend running Garry's Mod through Proton.** In Steam, right-click Garry's
+> Mod → Properties → Compatibility → *Force the use of a specific Steam Play compatibility tool*,
+> and pick a Proton version. The game then runs its Windows build, and GM:FM's effects look as
+> they do on Windows. The native Linux game works with the fixes below, but small rendering
+> differences remain that make some shots look off.
+
 - SSAO and film grain no longer close the game. The shaders were rebuilt without the branches
   the Linux shader translation refused.
 - The render targets the Linux game can't draw to were replaced: SSAO reads depth packed into
