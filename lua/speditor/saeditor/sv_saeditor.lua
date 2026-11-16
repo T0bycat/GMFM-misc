@@ -412,13 +412,17 @@ local function cacheOf(tr)
 	c = { order = tr.order, n = #tr.order, stamp = tr.stamp, full = {}, parts = {} }
 	local special = {}
 	for _, f in ipairs(tr.order) do
-		local st = tr.keys[f].st
+		local k = tr.keys[f]
+		local st = k.st
 		if st.only then
 			for p in pairs(st.only) do special[p] = true end
 		else
 			c.full[#c.full + 1] = f
 			for p in pairs(st.skip or {}) do special[p] = true end
 		end
+		-- a part given a motion of its own moves between its keys with it, even on a track of
+		-- full keys only (the row of an attribute, a slider or a bone opened out)
+		for p in pairs(k.pe or {}) do special[p] = true end
 	end
 	c.has = next(special) ~= nil
 	for p in pairs(special) do
@@ -574,23 +578,39 @@ local function smoothCamera(ent, tr, frame, half)
 		end
 	end
 	if frame < lo or frame > hi then return end
-	local pos, fwd, up, fov, sum = Vector(0, 0, 0), Vector(0, 0, 0), Vector(0, 0, 0), 0, 0
+	-- (b0.2.7) a field between the keys that hold it: the keys of some attributes only (auto key)
+	-- leave the others to the keys around them
+	local c = cacheOf(tr)
+	local function field(t, name, mix)
+		local part = "a" .. SA.AttrIndex("camera", name)
+		local list = c.parts[part]
+		local a, b, u = segment(tr, t, list or c.full, list and part or nil)
+		if not a or a[name] == nil then return nil end
+		local vb = b[name]
+		if vb == nil then vb = a[name] end
+		return mix(a[name], vb, u)
+	end
+	-- each field on its own: one no key holds (a flown camera has keys of its place and turn
+	-- only) stays as the keys left it
+	local pos, fwd, up, fov = Vector(0, 0, 0), Vector(0, 0, 0), Vector(0, 0, 0), 0
+	local sp, sa, sf = 0, 0, 0
 	for i = -SMOOTH_STEPS, SMOOTH_STEPS do
 		local w = 1 - math.abs(i) / (SMOOTH_STEPS + 1)
-		local a, b, u = segment(tr, math.Clamp(frame + i / SMOOTH_STEPS * half, lo, hi))
-		local ang = slerp(a.ang, b.ang, u)
-		pos:Add(lerpV(a.pos, b.pos, u) * w)
-		fwd:Add(ang:Forward() * w)
-		up:Add(ang:Up() * w)
-		fov = fov + lerpN(a.fov, b.fov, u) * w
-		sum = sum + w
+		local t = math.Clamp(frame + i / SMOOTH_STEPS * half, lo, hi)
+		local p, ang, fv = field(t, "pos", lerpV), field(t, "ang", slerp), field(t, "fov", lerpN)
+		if p then pos:Add(p * w) sp = sp + w end
+		if ang then
+			fwd:Add(ang:Forward() * w)
+			up:Add(ang:Up() * w)
+			sa = sa + w
+		end
+		if fv then fov, sf = fov + fv * w, sf + w end
 	end
-	if fwd:LengthSqr() < 1e-6 then return end
 	if not ent.SPeditor_Attach then
-		ent:SetPos(pos / sum)
-		ent:SetAngles(fwd:AngleEx(up))
+		if sp > 0 then ent:SetPos(pos / sp) end
+		if sa > 0 and fwd:LengthSqr() > 1e-6 then ent:SetAngles(fwd:AngleEx(up)) end
 	end
-	ent:SetCameraFOV(fov / sum)
+	if sf > 0 then ent:SetCameraFOV(fov / sf) end
 end
 
 -- one bone offset between two keys
@@ -839,8 +859,15 @@ end
 local function applyTrack(ent, tr, frame, noFace)
 	if #tr.order == 0 then return end
 	attApply(ent, tr, frame)
+	local function camSmooth()
+		if S.IsCamera(ent) and #tr.order > 1 then
+			local smooth = ent:GetCamSmooth()
+			if smooth > 0.01 then smoothCamera(ent, tr, frame, smooth * anim(ent.SPeditor_Owner).fps) end
+		end
+	end
 	if cacheOf(tr).has and S.IsAux(ent) then
 		applyAuxParts(ent, tr, frame)
+		camSmooth()
 		return
 	end
 	if cacheOf(tr).has and not S.IsAux(ent) then
@@ -857,10 +884,7 @@ local function applyTrack(ent, tr, frame, noFace)
 	local a, b, u = segment(tr, frame)
 	if not a then return end
 	applyState(ent, a, b, u, noFace)
-	if a.kind == "camera" and S.IsCamera(ent) and #tr.order > 1 then
-		local smooth = ent:GetCamSmooth()
-		if smooth > 0.01 then smoothCamera(ent, tr, frame, smooth * anim(ent.SPeditor_Owner).fps) end
-	end
+	if a.kind == "camera" then camSmooth() end
 end
 
 local function entMap(ply)
@@ -1387,6 +1411,19 @@ end
 -- object's face track
 local function motionApply(st, now, base, w, noFlex)
 	if w <= 0 then return end
+	local attrs = SA.ATTRS[st.kind]
+	if attrs then
+		-- (b0.2.7) a camera, light or effect: a key of some attributes only (auto key) takes the
+		-- edit in those; the fields it does not hold are not read from it
+		local function has(field)
+			local i = SA.AttrIndex(st.kind, field)
+			return i and defines(st, "a" .. i)
+		end
+		if st.pos and now.pos and base.pos and has("pos") then st.pos = st.pos + (now.pos - base.pos) * w end
+		if st.ang and now.ang and base.ang and has("ang") then st.ang = turnBy(st.ang, now.ang, base.ang, w) end
+		motionOther(st, now, base, w)
+		return
+	end
 	if st.pos and now.pos and base.pos and defines(st, "p0") and st.kind ~= "face" then
 		st.pos = st.pos + (now.pos - base.pos) * w
 		st.ang = turnBy(st.ang, now.ang, base.ang, w)
@@ -1520,94 +1557,156 @@ local FACE_VALUE = { zero = 0, half = 0.5, one = 1 }
 
 -- extra: stagger — the object's place in the selection (0, 1, …); paste / playhead — the frame
 -- whose values are taken
+-- One pass of a preset over the keys order (their frames; orig: frame -> snapshot). put(f, st)
+-- takes the changed snapshot of a key. True when something changed.
+local function presetPass(order, orig, preset, sel, strength, seed, extra, put)
+	local firstF
+	for _, f in ipairs(order) do
+		if f >= sel[1] and f <= sel[4] then firstF = f break end
+	end
+	if not firstF then return false end
+	local changed = false
+	local inV, outV = presetValueAt(order, orig, sel[1]), presetValueAt(order, orig, sel[4])
+	local refV = (preset == "paste" or preset == "playhead") and presetValueAt(order, orig, extra or 0) or nil
+	for i, f in ipairs(order) do
+		local w = SA.TimeSelWeight(f, sel) * strength
+		if w > 0 then
+			local prev = orig[order[i - 1] or -1]
+			local nxt = orig[order[i + 1] or -1]
+			local fn, first = nil, orig[firstF]
+			local toward = function(v, _, _, c) return v + (c - v) * w end
+			if preset == "smooth" or preset == "sharp" or preset == "steady" then
+				-- at full strength a key goes half way to the middle of its neighbours (or as far away)
+				local sign = preset == "sharp" and -0.5 or 0.5
+				fn = function(v, a, b) return v + ((a + b) / 2 - v) * w * sign end
+			elseif preset == "hold" then
+				fn = toward
+			elseif preset == "in" or preset == "out" then
+				first = preset == "in" and inV or outV
+				fn = toward
+			elseif TARGET_CURVES[preset] then
+				local u = math.Clamp((f - sel[1]) / math.max(sel[4] - sel[1], 1), 0, 1)
+				first = lerpState(inV, outV, TARGET_CURVES[preset](u))
+				fn = toward
+			elseif preset == "paste" or preset == "playhead" then
+				first = refV
+				fn = toward
+			elseif preset == "stagger" then
+				-- each next object of the selection runs the same motion later (2 frames per
+				-- object at full strength)
+				local d = (extra or 0) * 2 * strength
+				if d > 0 then
+					first = presetValueAt(order, orig, f - d)
+					local ws = SA.TimeSelWeight(f, sel)
+					fn = function(v, _, _, c) return v + (c - v) * ws end
+				end
+			elseif FACE_VALUE[preset] then
+				local x = FACE_VALUE[preset]
+				fn = function(v, _, _, _, _, section)
+					if section == "flex" then return v + (x - v) * w end
+					return v
+				end
+			elseif preset == "round" then
+				fn = function(v, _, _, _, key, section)
+					-- face sliders to off / on, turns to whole degrees, places to whole units
+					if section == "flex" then return v + (math.Round(v) - v) * w end
+					if section == "bones" and key == "s" then return v end
+					return v + (math.Round(v) - v) * w
+				end
+			elseif preset == "default" then
+				fn = function(v, _, _, _, key, section)
+					-- bone offsets and turns go to zero, sizes to one; faces to zero; the place of
+					-- the object and a ragdoll's bodies stay
+					if section == "flex" then return v - v * w end
+					if section ~= "bones" then return v end
+					if key == "s" then return v + (1 - v) * w end
+					if key == "p" or key == "a" then return v - v * w end
+					return v
+				end
+			elseif preset == "jitter" then
+				fn = function(v, _, _, _, key, section, comp)
+					local amp = section == "flex" and JITTER.flex or (JITTER[key] or 0)
+					-- a ragdoll's bodies keep their distances: only their turns shake
+					if section == "phys" and key == "p" then amp = 0 end
+					if section == "bones" and key == "s" then amp = 0 end
+					if amp == 0 then return v end
+					local r = util.SharedRandom("gmfm_jitter", -1, 1, seed + f * 7 + (comp or 0) * 131 + #tostring(key) * 17)
+					return v + r * amp * w
+				end
+			end
+			if fn and first then
+				put(f, presetValue(orig[f], prev, nxt, first, fn))
+				changed = true
+			end
+		end
+	end
+	return changed
+end
+
+-- (b0.2.7) one part of a snapshot alone, in the place it has in a snapshot (so the presets treat
+-- it as they treat the whole: bones, phys, flex…), and back
+local function partAlone(st, part)
+	local kind, idx = partIndex(part)
+	local v = partValue(st, part)
+	if kind == "p" and idx == 0 then return { kind = st.kind, pos = st.pos, ang = st.ang } end
+	if kind == "p" then return { kind = st.kind, phys = { [idx] = v } } end
+	if kind == "b" then return { kind = st.kind, bones = { [idx] = v } } end
+	if kind == "f" then return { kind = st.kind, flex = { [idx] = v } } end
+	if kind == "e" then return { kind = st.kind, eye = v } end
+	local field = kind == "a" and (SA.ATTRS[st.kind] or {})[idx + 1]
+	return { kind = st.kind, [field or "none"] = v }
+end
+local function partBack(pst, part, st)
+	local kind, idx = partIndex(part)
+	local v
+	if kind == "p" and idx == 0 then v = { p = pst.pos, a = pst.ang }
+	elseif kind == "p" then v = pst.phys and pst.phys[idx]
+	elseif kind == "b" then v = pst.bones and pst.bones[idx]
+	elseif kind == "f" then v = pst.flex and pst.flex[idx]
+	elseif kind == "e" then v = pst.eye
+	elseif kind == "a" then
+		local field = (SA.ATTRS[st.kind] or {})[idx + 1]
+		v = field and pst[field]
+	end
+	putPart(st, part, v)
+end
+
 local function presetTrack(tr, preset, sel, strength, seed, extra)
 	if not tr or #tr.order == 0 then return false end
 	-- steady: the smoothing several times over
 	local passes = preset == "steady" and 4 or 1
 	local changed = false
+	local function putWhole(f, st)
+		local k = tr.keys[f]
+		tr.keys[f] = { e = k.e, bz = k.bz, pe = k.pe, st = st }
+	end
 	for _ = 1, passes do
-		local orig, firstF = {}, nil
-		for _, f in ipairs(tr.order) do
-			orig[f] = tr.keys[f].st
-			if not firstF and f >= sel[1] and f <= sel[4] then firstF = f end
-		end
-		if not firstF then return changed end
-		local order = table.Copy(tr.order)
-		local inV, outV = presetValueAt(order, orig, sel[1]), presetValueAt(order, orig, sel[4])
-		local refV = (preset == "paste" or preset == "playhead") and presetValueAt(order, orig, extra or 0) or nil
-		for i, f in ipairs(order) do
-			local w = SA.TimeSelWeight(f, sel) * strength
-			if w > 0 then
-				local k = tr.keys[f]
-				local prev = orig[order[i - 1] or -1]
-				local nxt = orig[order[i + 1] or -1]
-				local fn, first = nil, orig[firstF]
-				local toward = function(v, _, _, c) return v + (c - v) * w end
-				if preset == "smooth" or preset == "sharp" or preset == "steady" then
-					-- at full strength a key goes half way to the middle of its neighbours (or as far away)
-					local sign = preset == "sharp" and -0.5 or 0.5
-					fn = function(v, a, b) return v + ((a + b) / 2 - v) * w * sign end
-				elseif preset == "hold" then
-					fn = toward
-				elseif preset == "in" or preset == "out" then
-					first = preset == "in" and inV or outV
-					fn = toward
-				elseif TARGET_CURVES[preset] then
-					local u = math.Clamp((f - sel[1]) / math.max(sel[4] - sel[1], 1), 0, 1)
-					first = lerpState(inV, outV, TARGET_CURVES[preset](u))
-					fn = toward
-				elseif preset == "paste" or preset == "playhead" then
-					first = refV
-					fn = toward
-				elseif preset == "stagger" then
-					-- each next object of the selection runs the same motion later (2 frames per
-					-- object at full strength)
-					local d = (extra or 0) * 2 * strength
-					if d > 0 then
-						first = presetValueAt(order, orig, f - d)
-						local ws = SA.TimeSelWeight(f, sel)
-						fn = function(v, _, _, c) return v + (c - v) * ws end
-					end
-				elseif FACE_VALUE[preset] then
-					local x = FACE_VALUE[preset]
-					fn = function(v, _, _, _, _, section)
-						if section == "flex" then return v + (x - v) * w end
-						return v
-					end
-				elseif preset == "round" then
-					fn = function(v, _, _, _, key, section)
-						-- face sliders to off / on, turns to whole degrees, places to whole units
-						if section == "flex" then return v + (math.Round(v) - v) * w end
-						if section == "bones" and key == "s" then return v end
-						return v + (math.Round(v) - v) * w
-					end
-				elseif preset == "default" then
-					fn = function(v, _, _, _, key, section)
-						-- bone offsets and turns go to zero, sizes to one; faces to zero; the place of
-						-- the object and a ragdoll's bodies stay
-						if section == "flex" then return v - v * w end
-						if section ~= "bones" then return v end
-						if key == "s" then return v + (1 - v) * w end
-						if key == "p" or key == "a" then return v - v * w end
-						return v
-					end
-				elseif preset == "jitter" then
-					fn = function(v, _, _, _, key, section, comp)
-						local amp = section == "flex" and JITTER.flex or (JITTER[key] or 0)
-						-- a ragdoll's bodies keep their distances: only their turns shake
-						if section == "phys" and key == "p" then amp = 0 end
-						if section == "bones" and key == "s" then amp = 0 end
-						if amp == 0 then return v end
-						local r = util.SharedRandom("gmfm_jitter", -1, 1, seed + f * 7 + (comp or 0) * 131 + #tostring(key) * 17)
-						return v + r * amp * w
-					end
-				end
-				if fn and first then
-					tr.keys[f] = { e = k.e, bz = k.bz, pe = k.pe, st = presetValue(k.st, prev, nxt, first, fn) }
-					changed = true
-				end
+		local c = cacheOf(tr)
+		local orig = {}
+		for _, f in ipairs(tr.order) do orig[f] = tr.keys[f].st end
+		local any
+		if not c.has then
+			any = presetPass(table.Copy(tr.order), orig, preset, sel, strength, seed, extra, putWhole)
+		else
+			-- (b0.2.7) keys of some parts only (bone keys, auto key): the full keys among themselves,
+			-- then every part between the keys that hold it — the neighbours of a bone's key are the
+			-- keys of that bone, not keys of other bones that lack it
+			any = presetPass(table.Copy(c.full), orig, preset, sel, strength, seed, extra, putWhole)
+			for part, list in pairs(c.parts) do
+				local po = {}
+				for _, f in ipairs(list) do po[f] = partAlone(orig[f], part) end
+				any = presetPass(table.Copy(list), po, preset, sel, strength, seed, extra, function(f, pst)
+					local k = tr.keys[f]
+					local st = table.Copy(k.st)
+					partBack(pst, part, st)
+					tr.keys[f] = { e = k.e, bz = k.bz, pe = k.pe, st = st }
+				end) or any
 			end
 		end
+		if not any then break end
+		changed = true
+		-- the next pass (steady) works on what this one made
+		tr.stamp = (tr.stamp or 0) + 1
 	end
 	if changed then
 		tr.stamp = (tr.stamp or 0) + 1
@@ -2280,7 +2379,7 @@ COMP:NetReceive("Key", function(ply)
 			if k and parts then
 				-- (b0.2.5) the motion of some parts only (picked on a bone's row): the other bones
 				-- keyed at the same frame keep theirs
-				if table.HasValue(SA.EASES, str) and str ~= "bezier" and k.st.kind == "prop" then
+				if table.HasValue(SA.EASES, str) and str ~= "bezier" and (k.st.kind == "prop" or k.st.kind == "face" or SA.ATTRS[k.st.kind]) then
 					local pe = k.pe and table.Copy(k.pe) or {}
 					for part in pairs(parts) do
 						if defines(k.st, part) then pe[part] = (str ~= k.e) and str or nil end
@@ -3254,6 +3353,9 @@ end)
 --   of a ragdoll is its place and turn relative to the ragdoll's root, any other bone — its offset.
 ---------------------------------------------------------------------
 local CH_XYZ = { "x", "y", "z", "pitch", "yaw", "roll" }
+-- (b0.2.7) the attribute (SA.ATTRS) a channel of a camera, light or effect shows
+local CH_ATTR = { x = "pos", y = "pos", z = "pos", pitch = "ang", yaw = "ang", roll = "ang",
+	fov = "fov", bri = "bri", radius = "radius", lfov = "fov", time = "time", fxscale = "scale" }
 
 local function partOf(ent, part)
 	if part < 0 then return "root" end
@@ -3338,15 +3440,31 @@ local function sendCurve(ply, uid, part)
 	local out = { uid = uid, part = part, keys = {} }
 	if tr and IsValid(ent) and #tr.order > 0 then
 		local kind, idx = partOf(ent, part)
-		-- bone keys: only the keys that hold this part are its keys
+		-- bone keys: only the keys that hold this part are its keys. (b0.2.7) A camera, light or
+		-- effect: each channel is the attribute it shows (x y z — "pos"…), and a key of some
+		-- attributes only (auto key) is a key of those channels only: d = "1101…" says which
 		local pid = (kind == "root") and "p0" or ((kind == "phys") and ("p" .. idx) or ("b" .. idx))
+		local ak = kind == "root" and auxKind(ent)
+		local function partFor(ch)
+			local i = ak and CH_ATTR[ch] and SA.AttrIndex(ak, CH_ATTR[ch])
+			return i and ("a" .. i) or pid
+		end
 		for _, f in ipairs(tr.order) do
 			local k = tr.keys[f]
-			if defines(k.st, pid) then
-				out.chans = out.chans or channels(k.st, kind)
+			local chans = out.chans or channels(k.st, kind)
+			local mask, ce, any = {}, {}, false
+			for c, ch in ipairs(chans) do
+				local p = partFor(ch)
+				local on = defines(k.st, p)
+				mask[c], any = on and "1" or "0", any or on
+				-- the part's own motion from this key (a row's "Motion to the next key")
+				if on and k.pe and k.pe[p] then ce[#ce + 1] = c .. "=" .. k.pe[p] end
+			end
+			if any then
+				out.chans = chans
 				local vals = {}
-				for c, ch in ipairs(out.chans) do vals[c] = chanGet(k.st, kind, idx, ch) or 0 end
-				out.keys[#out.keys + 1] = { f = f, e = k.e, bz = k.bz, v = vals }
+				for c, ch in ipairs(chans) do vals[c] = chanGet(k.st, kind, idx, ch) or 0 end
+				out.keys[#out.keys + 1] = { f = f, e = k.e, bz = k.bz, v = vals, d = table.concat(mask), ce = table.concat(ce, ",") }
 			end
 		end
 	end
@@ -3369,7 +3487,8 @@ COMP:NetReceive("Curve", function(ply)
 			local st = chanSet(k.st, kind, idx, ch, v)
 			if st then
 				local op = opBefore(ply, id, uid)
-				tr.keys[frame] = { e = k.e, bz = k.bz, st = st }
+				tr.keys[frame] = { e = k.e, bz = k.bz, pe = k.pe, st = st }
+				tr.stamp = (tr.stamp or 0) + 1
 				opAfter(ply, op, uid)
 				SA.ApplyAll(ply, a.cur)
 				SA.SendSummary(ply)

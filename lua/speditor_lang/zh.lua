@@ -1245,7 +1245,6 @@ SPeditor.AddLanguage({
 		sa_bone_key_delete = "删除这根骨骼的关键帧",
 		sa_bone_key_here = "在这里为这根骨骼打关键帧",
 		sa_bone_key_set = "第 %s 帧的骨骼关键帧",
-		sa_bone_keys = "骨骼关键帧：选中骨骼时打的关键帧（K、拖动后的自动关键帧）只包含这根骨骼，每根骨骼在自己的关键帧之间运动",
 		sa_clear_all = "移除所有动画",
 		sa_clear_all_q = "要移除所有对象的所有关键帧、声音和镜头切换吗？",
 		sa_clear_track = "移除此对象的动画",

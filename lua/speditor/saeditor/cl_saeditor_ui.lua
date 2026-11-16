@@ -360,7 +360,6 @@ local function buildTimeline(page)
 		if SA.HasKey(uid, f) then SA.DeleteKey(uid, f) end
 	end)
 	UI.IconButton(bar, "icon16/bullet_red.png", L("sa_autokey"), function() SA.autokey = not SA.autokey end, function() return SA.autokey end)
-	UI.IconButton(bar, "icon16/arrow_branch.png", L("sa_bone_keys"), function() SA.ToggleBoneKeys() end, function() return SA.BoneKeysOn() end)
 	UI.IconButton(bar, "icon16/user_gray.png", L("sa_ghosts"), function() SA.ToggleGhosts() end, function() return SA.GhostsOn() end)
 	UI.IconButton(bar, "icon16/time.png", L("sa_tsel_tip"), function() SA.TimeSelMenu(round(SA.frame)) end, function() return SA.timeSel ~= nil end)
 	sep()
@@ -390,6 +389,15 @@ local function buildTimeline(page)
 	local tl = vgui.Create("DPanel", page)
 	tl:Dock(FILL)
 	tl:SetMouseInputEnabled(true)
+	-- Delete (cl_speditor.lua) over the rows with keys selected: those keys go, not the object
+	C.DeleteKeysHere = function()
+		if not (IsValid(tl) and tl:IsVisible() and tl:IsHovered()) or SA.rendering then return false end
+		local list = selList()
+		if #list == 0 then return false end
+		SA.DeleteKeys(list)
+		clearSel()
+		return true
+	end
 	-- the Graph Editor takes the place of the rows (made the first time it is asked for)
 	local graphHost = vgui.Create("DPanel", page)
 	graphHost:Dock(FILL)
@@ -500,8 +508,9 @@ local function buildTimeline(page)
 	--  * opened out (a double click on its name): Position, then every bone that moves between the
 	--    keys (SA.moving, from the server) or has keys of its own. A key dragged on one of these
 	--    rows takes only that bone along (sv_saeditor.lua, the parts of OP.SHIFT);
-	--  * selected (b0.2.5, with the bone keys on or a track that has bone keys): the selected bones
-	--    and the bones with keys of their own, as SFM shows the bone channels side by side.
+	--  * selected (b0.2.5): the selected bones and the bones with keys of their own, as SFM shows
+	--    the bone channels side by side (b0.2.7: always, the Bone keys mode is gone — a bone's row
+	--    is where a key of that bone alone is set).
 	local function modelRows(ent, uid, expanded)
 		local want, pos = {}, false
 		local own = SA.OwnParts(uid)
@@ -523,12 +532,7 @@ local function buildTimeline(page)
 			end
 		end
 		if ent == C.selected then
-			local any = SA.BoneKeysOn()
-			for _, k in ipairs(SA.tracks[uid] or {}) do
-				if any then break end
-				any = k.only ~= nil or k.skip ~= nil
-			end
-			if any then
+			do
 				local sel = C.SelectedBones and C.SelectedBones() or {}
 				if #sel == 0 and C.selBone >= 0 then sel = { C.selBone } end
 				for _, b in ipairs(sel) do
@@ -2636,7 +2640,6 @@ COMP:AddMenu("edit", function(m)
 	sub:AddOption(L("sa_key") , function() SA.SetKey() end):SetIcon("icon16/key_add.png")
 	sub:AddOption(L("sa_key_all"), function() SA.SetKey(C.Objects()) end):SetIcon("icon16/key_go.png")
 	sub:AddOption(L("sa_autokey"), function() SA.autokey = not SA.autokey end):SetChecked(SA.autokey)
-	sub:AddOption(L("sa_bone_keys"), function() SA.ToggleBoneKeys() end):SetChecked(SA.BoneKeysOn())
 	sub:AddOption(L("sa_ghosts"), function() SA.ToggleGhosts() end):SetChecked(SA.GhostsOn())
 	-- a0.8: how new keys move, and the whole animation made continuous at once
 	local em, eo = sub:AddSubMenu(L("sa_new_ease"))

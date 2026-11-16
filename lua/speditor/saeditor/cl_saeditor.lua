@@ -45,14 +45,13 @@ function SA.EntByUID(uid)
 end
 
 ---------------------------------------------------------------------
--- Bone keys (a0.6): with the mode on, a key set while a bone is selected — by K or by auto key
--- after a drag — holds only that bone, and each bone moves between its own keys (as in SFM).
+-- Bone keys (a0.6): a key may hold only some parts of a model, and each part moves between its
+-- own keys (as in SFM). Auto key after a drag keys only the bones the drag moved, and a bone's
+-- row on the timeline keys that bone alone; K keys the whole pose. (b0.2.7: the Bone keys mode
+-- that once switched this on is gone, the opened-out tracks do its work.)
 -- A part is "p<i>" — physics body i of a ragdoll ("p0" — its root, the whole ragdoll) — or
 -- "b<i>" — the offset of bone i.
 ---------------------------------------------------------------------
-local cvBoneKeys = CreateClientConVar("gmfm_bone_keys", "0", true, false, "SAeditor: keys of a selected bone hold only that bone", 0, 1)
-function SA.BoneKeysOn() return cvBoneKeys:GetBool() end
-function SA.ToggleBoneKeys() RunConsoleCommand("gmfm_bone_keys", cvBoneKeys:GetBool() and "0" or "1") end
 
 -- the parts of a bone, as the list the server takes: "p3,b14" (nil — not a bone of a model)
 function SA.BoneParts(ent, bone)
@@ -420,19 +419,6 @@ SA.MotionSel = motionSel
 -- ents — list of objects (the selection by default), frame — the current one by default;
 -- parts — a bone key of these parts ("p3,b14", SA.BoneParts) for every object of the list
 function SA.SetKey(ents, frame, quiet, parts)
-	-- K with the bone keys on and a bone selected: a key of that bone
-	if not ents and not parts and SA.BoneKeysOn() then
-		-- (b0.2.7) the bones of the selection, all of them in one key
-		local list, seen = {}, {}
-		for _, b in ipairs(C.SelectedBones()) do
-			local p = SA.BoneParts(C.selected, b)
-			for part in string.gmatch(p or "", "[^,]+") do
-				if not seen[part] then seen[part] = true list[#list + 1] = part end
-			end
-		end
-		parts = #list > 0 and table.concat(list, ",") or nil
-		if parts then ents = { C.selected } end
-	end
 	ents = ents or C.SelectionList()
 	if #ents == 0 then
 		if not quiet then SPeditor.Notify("#sa_need_sel", 0) end
@@ -451,19 +437,17 @@ function SA.SetKey(ents, frame, quiet, parts)
 	local ts = motionSel(frame)
 	for _, e in ipairs(ents) do
 		local uid = SA.UID(e)
-		if uid ~= 0 and ts and not parts then
+		-- a time selection takes the edit over it, also from auto key's keys of some parts only
+		-- (b0.2.7: those bypassed the Motion Editor); the parts the edit did not change stay
+		if uid ~= 0 and ts then
 			sendKey(id, OP.MOTION, uid, frame, 0, SA.TimeSelString(ts))
 		elseif uid ~= 0 then
 			local def = "def:" .. SA.NewEase()
-			-- (b0.2.5) with the bone keys on, a key of the whole object leaves the bones that have
-			-- keys of their own to those keys: each bone stays a separate channel, as in SFM
-			local own = not parts and SA.BoneKeysOn() and SA.OwnParts(uid)
-			if own then def = "skip:" .. own .. "|" .. def end
 			sendKey(id, OP.SET, uid, frame, 0, parts and ("parts:" .. parts .. "|" .. def) or def)
 		end
 	end
 	pushHistory("sa key", id)
-	if ts and not parts then
+	if ts then
 		if not quiet then SPeditor.Notify("#sa_motion_set|" .. ts[1] .. "|" .. ts[4], 3) end
 		return
 	end
@@ -490,7 +474,7 @@ function SA.SetFaceKey(ents, frame, quiet, parts)
 	local ts = motionSel(frame)
 	for _, e in ipairs(list) do
 		local uid = SA.UID(e)
-		if uid ~= 0 and ts and not parts then
+		if uid ~= 0 and ts then
 			sendKey(id, OP.MOTION, SA.FaceTrack(uid), frame, 0, SA.TimeSelString(ts))
 		elseif uid ~= 0 then
 			local def = "def:" .. SA.NewEase()
@@ -856,8 +840,8 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 		end)
 		return
 	end
-	-- a drag of bones: a key of the bones that moved (the gizmo tells which). b0.2.7: always, not
-	-- only with the bone keys on — moving the head set a key on every bone, the arms' rows too
+	-- a drag of bones: a key of the bones that moved (the gizmo tells which). b0.2.7: always (it
+	-- took the Bone keys mode before) — moving the head set a key on every bone, the arms' rows too
 	-- (K still keys the whole pose)
 	local movedAux = C.lastEditAux
 	if not (movedAux and RealTime() - movedAux.t < 0.5) then movedAux = nil end
@@ -1041,35 +1025,49 @@ end)
 local COL_PATH, COL_KEY, COL_CUR = Color(233, 145, 45, 200), Color(255, 255, 255, 230), Color(255, 90, 60, 255)
 local PATH_STEPS, PATH_DENSE = 10, 300
 
+-- the motion of the place from key k (its own, b0.2.5, or the key's)
+local function placeEase(k, part) return k.pe and k.pe[part] or k.e end
+
 -- the place between keys i and i + 1 at the share u of the stretch
-local function pathAt(keys, i, u)
+local function pathAt(keys, i, u, part)
 	local ka, kb = keys[i], keys[i + 1]
-	if ka.e == "spline" then
+	local e = placeEase(ka, part)
+	if e == "spline" then
 		local k0, k3 = keys[i - 1], keys[i + 2]
 		local w0, w1, w2, w3 = SA.SplineWeights(k0 and k0.f or (2 * ka.f - kb.f), ka.f, kb.f, k3 and k3.f or (2 * kb.f - ka.f), u)
 		return (k0 or ka).pos * w0 + ka.pos * w1 + kb.pos * w2 + (k3 or kb).pos * w3
 	end
-	return LerpVector(SA.EaseValue(ka.e, u), ka.pos, kb.pos)
+	return LerpVector(SA.EaseValue(e, u), ka.pos, kb.pos)
 end
 
 COMP:Hook("PostDrawTranslucentRenderables", function(bDepth, bSkybox)
 	if bDepth or bSkybox or not C.active or C.hideUI or C.vpPass ~= "primary" then return end
-	local keys = SA.tracks[SA.UID(C.selected)]
-	if not keys or #keys < 2 then return end
+	local all = SA.tracks[SA.UID(C.selected)]
+	if not all or #all < 2 then return end
+	-- (b0.2.7) only the keys that hold the place: not those of some bones only, nor a camera's
+	-- keys of its FOV alone (auto key), whose place is just where the object stood then
+	local part = C.IsAux(C.selected) and "a" .. (SA.AttrIndex(C.IsCamera(C.selected) and "camera"
+		or (C.IsLight(C.selected) and "light" or "effect"), "pos") or 0) or "p0"
+	local keys = {}
+	for _, k in ipairs(all) do
+		if SA.KeyHasParts(k, part) then keys[#keys + 1] = k end
+	end
+	if #keys < 2 then return end
 	local restore = SPeditor.Render.HelperLighting()
 	local cur = math.floor(SA.frame + 0.5)
 	local dense = #keys > PATH_DENSE
 	for i, k in ipairs(keys) do
 		local nxt = keys[i + 1]
-		if nxt and (dense or k.e == "linear") then
+		local e = placeEase(k, part)
+		if nxt and (dense or e == "linear") then
 			render.DrawLine(k.pos, nxt.pos, COL_PATH, false)
-		elseif nxt and k.e == "hold" then
+		elseif nxt and e == "hold" then
 			-- stands, then jumps: the jump is drawn thin and dashed
 			for d = 0, 7, 2 do render.DrawLine(LerpVector(d / 8, k.pos, nxt.pos), LerpVector((d + 1) / 8, k.pos, nxt.pos), COL_PATH, false) end
 		elseif nxt then
 			local prev = k.pos
 			for n = 1, PATH_STEPS do
-				local p = pathAt(keys, i, n / PATH_STEPS)
+				local p = pathAt(keys, i, n / PATH_STEPS, part)
 				render.DrawLine(prev, p, COL_PATH, false)
 				prev = p
 			end
