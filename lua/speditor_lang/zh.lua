@@ -663,6 +663,7 @@ SPeditor.AddLanguage({
 		hist_visibility = "可见性 / 锁定",
 		ik_feet = "IK：身体移动时双脚固定在地面",
 		ik_hands = "IK：身体移动时双手固定不动",
+		autopose = "自动姿势：手被拉到手臂够不到的地方时，身体会跟着移动",
 		aspect_same = "与主视口相同",
 		about_link_guide = "使用说明", about_link_open = "打开", about_link_fail = "无法在此处打开：请先打开编辑器", about_link_closed = "此窗口已关闭：窗口 → 布局 → 重置布局 可以恢复它",
 		bone_hide = "隐藏骨骼 %s（不显示，点击无法选中）", bone_unhide_all = "显示隐藏的骨骼（%d）",

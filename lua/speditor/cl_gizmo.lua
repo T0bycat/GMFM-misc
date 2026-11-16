@@ -690,10 +690,18 @@ local function startDrag(tgt, hit)
 		end
 	end
 	if hit.mode == "move" and not d.pole then root, mid = ikChain(tgt) end
+	-- (b0.2.7) Auto pose: a hand pulled past the arm's reach takes the body along (cl_autopose.lua)
+	if root and C.AutoPoseOn() and SPeditor.AutoPose.IsHand(tgt.ent, tgt.bone) then
+		local st = SPeditor.AutoPose.Begin(tgt.ent, tgt.bone, root, mid)
+		if st then
+			d.auto, d.items = st, st.items
+			root = nil
+		end
+	end
 	if root then
 		d.items = buildIKItems(tgt, root, mid)
 		d.ik = d.items ~= nil
-	elseif hit.mode == "move" then
+	elseif hit.mode == "move" and not d.auto then
 		root, mid = manipIKChain(tgt)
 		if root then
 			d.items = buildManipIKItems(tgt, root, mid)
@@ -746,6 +754,11 @@ local function applyPole(d, off)
 end
 
 local function applyMove(d, off)
+	if d.auto then
+		SPeditor.AutoPose.Solve(d.auto, d.auto.H.p0 + off)
+		sendItems(d)
+		return
+	end
 	if d.pole then applyPole(d, off) return end
 	if d.ik then applyIK(d, off) return end
 	if d.mik then applyManipIK(d, off) return end
@@ -990,8 +1003,11 @@ local function endDrag()
 	if d.kind == "phys" then
 		local root = false
 		for _, it in ipairs(d.items) do
-			if it.physIdx then parts[#parts + 1] = "p" .. it.physIdx end
-			root = root or it.physIdx == 0
+			-- (b0.2.7) Auto pose sends every body: only those it moved are keyed
+			if it.physIdx and (not d.auto or (it.p1 and moved(it))) then
+				parts[#parts + 1] = "p" .. it.physIdx
+				root = root or it.physIdx == 0
+			end
 		end
 		-- the other bodies are kept relative to the root body: when it moves alone, all of
 		-- them changed in that sense, and the key holds the whole pose

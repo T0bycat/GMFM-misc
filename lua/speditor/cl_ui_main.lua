@@ -791,6 +791,8 @@ function UI.Open()
 		steps("gmfm_snap_scale", { 0.05, 0.1, 0.25, 0.5 }, "view_snap_scale")
 		m:AddOption(L("ik_feet"), function() C.SetIKFeet(not C.gizmo.ikFeet) end):SetChecked(C.gizmo.ikFeet and true or false)
 		m:AddOption(L("ik_hands"), function() C.SetIKHands(not C.gizmo.ikHands) end):SetChecked(C.gizmo.ikHands and true or false)
+		-- (b0.2.7) Auto pose (cl_autopose.lua)
+		m:AddOption(L("autopose"), function() C.SetAutoPose(not C.AutoPoseOn()) end):SetChecked(C.AutoPoseOn())
 		-- ambient occlusion in the viewports (b0.2.6, gmfm_vp_ssao)
 		local ao = m:AddSubMenu(L("view_vp_ao"))
 		local cur = SPeditor.Render.ViewportAOMode and SPeditor.Render.ViewportAOMode() or 1
