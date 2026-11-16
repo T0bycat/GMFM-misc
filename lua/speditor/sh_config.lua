@@ -18,8 +18,8 @@ SPeditor.History = {
 	{ "b0.2",   "2026-10-21", "about_n" },
 	{ "b0.1",   "2026-10-20", "about_v01_" },
 }
-SPeditor.GitHub  = "https://github.com/DikiyChuvak/GMFM"     -- address of the addon page (empty: the About window shows a caption instead of a link)
-SPeditor.BugsURL = "https://steamcommunity.com/workshop/filedetails/discussion/3817852435/567048683131023614/"   -- "Bug Report and ideas" (Help → Report a problem)
+SPeditor.GitHub  = "https://github.com/T0bycat/GMFM-misc"     -- address of the addon page (GMFM-Misc) (empty: the About window shows a caption instead of a link)
+SPeditor.BugsURL = "https://github.com/T0bycat/GMFM-misc/issues/new"   -- a new issue on GMFM-Misc's GitHub (Help → Report a problem)
 
 SPeditor.Net = {
 	Toggle        = "SPeditor_Toggle",
