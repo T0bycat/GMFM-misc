@@ -72,7 +72,7 @@ end
 
 -- Merging a series of quick edits (sliders) into one history entry.
 -- getBefore() is called only on the first edit of a series; restore(state) sends the state to the server.
--- onFire(before, after) (b0.2.7, optional) runs just before the entry goes into the history: the
+-- onFire(before, after) (b0.2.6-misc.1, optional) runs just before the entry goes into the history: the
 -- finger poser tells auto key there which bones changed (C.lastEditParts).
 local bursts = {}
 
@@ -91,7 +91,7 @@ function C.BurstEdit(key, label, getBefore, after, restore, onFire)
 			function() restore(before) end,
 		function() restore(aft) end)
 	end
-	-- (b0.2.7) one gesture, one entry: while the mouse button is still held (a slider dragged
+	-- (b0.2.6-misc.1) one gesture, one entry: while the mouse button is still held (a slider dragged
 	-- with a pause in it) the series waits for the release instead of splitting in two
 	-- (a repeating timer, so the callback never has to make its own timer again)
 	local name = "SPeditor_Burst_" .. key
@@ -103,7 +103,7 @@ function C.BurstEdit(key, label, getBefore, after, restore, onFire)
 	end)
 end
 
--- (b0.2.7) Push the series still waiting for their 0.6 s at once: before the playhead moves, so
+-- (b0.2.6-misc.1) Push the series still waiting for their 0.6 s at once: before the playhead moves, so
 -- that auto key keys an edit at the frame where it was made (a slider moved and the timeline
 -- scrubbed right after keyed the edit at the new frame, or lost it)
 function C.FlushBursts()

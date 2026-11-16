@@ -4,7 +4,7 @@
 
 <p align="center">
 Random improvements to <a href="https://github.com/DikiyChuvak/GMFM">GM:FM — Garry's Mod Filmmaker</a>.<br>
-An unofficial fork of DikiyChuvak/GMFM, based on b0.2.6.
+An unofficial fork of DikiyChuvak/GMFM, based on b0.2.6. Current version: <b>b0.2.6-misc.1</b>.
 </p>
 
 <p align="center">
@@ -41,6 +41,8 @@ How to use the editor is explained inside the game: **Help → How to use**.
 - SSAO depth on Linux is smoothed without banding on most surfaces. Floors seen at a grazing
   angle can still show faint bands.
 - `gmfm_shadertest` and `gmfm_rendertest` test the editor's shaders and render targets one by one.
+- On native Linux the editor says once, when it opens, that Proton looks best (OK / Don't warn me
+  again; `gmfm_linux_notice 0` turns it off).
 
 ### Timeline
 - Double-click a track to open it out into a row per moving bone, face slider, or camera /
@@ -59,15 +61,32 @@ How to use the editor is explained inside the game: **Help → How to use**.
 - The Bone keys toggle is gone: **K** always keys the whole pose. A single bone's key is on its
   row's right-click menu.
 
+### Fingers
+- Select a hand or a finger bone and the Finger Poser shows at the top of the controls: GMod's
+  hand picture and values, a Curl slider, and presets (Flat, Point, Fist, Thumbs up, mirror,
+  other hand). Hands are found by GMod Finger Poser's bone names (HL2, TF2 / SFM, Portal…) or by
+  the bone tree.
+- With IK on, moving a finger's last joint bends the whole finger; several finger joints selected
+  bend together.
+
 ### Auto pose
-- **View → Auto pose** (`gmfm_autopose`): pull a ragdoll's hand past the arm's reach and the
+- **Auto pose** (the button next to IK on the viewport bar, or `gmfm_autopose`): pull a ragdoll's hand past the arm's reach and the
   body follows. The torso bends and turns toward the hand, then the body steps along the floor
   or down into a crouch. Planted feet and hands stay where they are.
-- `gmfm_autopose_follow 0..1` sets how much the body follows.
+- `gmfm_autopose_follow 0..1` sets how much the body follows. Right-click IK or Auto pose for
+  one menu with IK, Auto pose, feet planted and hands planted.
 
 ### Viewports
 - Right / middle / Alt navigation in the Secondary Viewport flies the camera it shows, keyed
   as in the Primary.
+
+### Fixes
+- A pause in the middle of a drag no longer splits one edit into two undo steps.
+- Graph Editor: deleting or moving a key on one bone's curves no longer takes every bone's key
+  at that frame.
+- Lights and effects edited by their sliders: auto key keys only the attributes that changed.
+- A scene keeps the map's sounds muted; the gizmo's World button no longer looks off at first.
+- Help → Report a problem and the About window lead to this fork's GitHub, not upstream.
 
 ## Install
 

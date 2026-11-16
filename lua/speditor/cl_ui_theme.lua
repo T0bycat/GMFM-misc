@@ -662,7 +662,7 @@ function CTRL:Setup(o)
 	return self
 end
 
--- (b0.2.7) A final value (the slider let go, a value typed, a reset) ends the edit at once: the
+-- (b0.2.6-misc.1) A final value (the slider let go, a value typed, a reset) ends the edit at once: the
 -- series of quick edits it belongs to goes into the history now, not 0.6 s later — auto key keys it
 -- right away (C.BurstEdit / C.FlushBursts, cl_history.lua)
 local function endEdit()

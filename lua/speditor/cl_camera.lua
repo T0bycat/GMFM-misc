@@ -172,7 +172,7 @@ local cvAutoAim = CreateClientConVar("gmfm_autoaim", "0", true, false, "Work cam
 function C.AutoAim() return cvAutoAim:GetBool() end
 
 ---------------------------------------------------------------------
--- (b0.2.7) Navigation in the Secondary Viewport, as in SFM: the same buttons fly what it shows —
+-- (b0.2.6-misc.1) Navigation in the Secondary Viewport, as in SFM: the same buttons fly what it shows —
 -- the work camera (kept in C.camera.saved while the Primary looks through a scene camera), or a
 -- scene camera, which is moved and keyed as when it is flown in the Primary. Before, only the
 -- Primary Viewport could be navigated.
@@ -292,7 +292,7 @@ SPeditor.Hook("Think", "SPeditor.CameraUpdate", function()
 		and not input.IsMouseDown(MOUSE_RIGHT) then
 		C.navWaitUp = nil
 	end
-	-- navigation inside the Primary Viewport, or (b0.2.7) the Secondary one
+	-- navigation inside the Primary Viewport, or (b0.2.6-misc.1) the Secondary one
 	local navTarget
 	if not m and not C.exporting and not C.navWaitUp then
 		if C.MouseInViewport() then
@@ -360,7 +360,7 @@ SPeditor.Hook("Think", "SPeditor.CameraUpdate", function()
 	C.ApplyWheel(cam, m, dt)
 
 	local amount = 1 - math.exp(-SMOOTH_K * dt)
-	-- (b0.2.7) the state the Secondary Viewport moves glides as the Primary's does
+	-- (b0.2.6-misc.1) the state the Secondary Viewport moves glides as the Primary's does
 	local sn = C.navCam
 	if sn and sn ~= cam and sn.target and sn.targetAngles then
 		sn.angles = LerpAngle(amount, sn.angles, sn.targetAngles)

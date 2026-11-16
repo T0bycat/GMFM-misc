@@ -217,7 +217,7 @@ local function vp2Frozen(src, pw, ph)
 	end
 	-- on a change: anything dragged (gizmo, slider, camera) counts as one, the rest is compared
 	local SA = SPeditor.Component and SPeditor.Component("saeditor").SA
-	-- (b0.2.7) and a navigation (the Secondary Viewport can be flown now)
+	-- (b0.2.6-misc.1) and a navigation (the Secondary Viewport can be flown now)
 	if C.gizmo.drag or C.camMode or C.navCam or input.IsMouseDown(MOUSE_LEFT) or (SA and SA.playing) then
 		vp2.sig = nil
 		if not fastNow and now - vp2.at < VP2_BUSY then return true end
@@ -309,7 +309,7 @@ local function buildViewport(title, key, pass)
 		C.SetIK(not C.gizmo.ik)
 		if C.gizmo.ik then SPeditor.Notify(L("ik_hint"), 0) end
 	end, function() return C.gizmo.ik end)
-	-- (b0.2.7) what IK does, in one place (they were spread over the View menu)
+	-- (b0.2.6-misc.1) what IK does, in one place (they were spread over the View menu)
 	local function ikMenu()
 		local m = SPeditor.UI.Menu()
 		m:AddOption(L("ik_hint"), function() C.SetIK(not C.gizmo.ik) end):SetChecked(C.gizmo.ik and true or false)
@@ -320,7 +320,7 @@ local function buildViewport(title, key, pass)
 		m:Open()
 	end
 	ikBtn.DoRightClick = ikMenu
-	-- (b0.2.7) Auto pose (cl_autopose.lua): lit while it acts (it needs IK or the rig, and turns IK on)
+	-- (b0.2.6-misc.1) Auto pose (cl_autopose.lua): lit while it acts (it needs IK or the rig, and turns IK on)
 	local apBtn = UI.IconButton(bar, "icon16/group_go.png", L("autopose") .. "\n" .. L("ik_rclick"), function()
 		local on = not C.AutoPoseActive()
 		C.SetAutoPose(on)
@@ -809,7 +809,7 @@ function UI.Open()
 		steps("gmfm_snap_scale", { 0.05, 0.1, 0.25, 0.5 }, "view_snap_scale")
 		m:AddOption(L("ik_feet"), function() C.SetIKFeet(not C.gizmo.ikFeet) end):SetChecked(C.gizmo.ikFeet and true or false)
 		m:AddOption(L("ik_hands"), function() C.SetIKHands(not C.gizmo.ikHands) end):SetChecked(C.gizmo.ikHands and true or false)
-		-- (b0.2.7) Auto pose (cl_autopose.lua)
+		-- (b0.2.6-misc.1) Auto pose (cl_autopose.lua)
 		m:AddOption(L("autopose"), function() C.SetAutoPose(not C.AutoPoseOn()) end):SetChecked(C.AutoPoseOn())
 		-- ambient occlusion in the viewports (b0.2.6, gmfm_vp_ssao)
 		local ao = m:AddSubMenu(L("view_vp_ao"))

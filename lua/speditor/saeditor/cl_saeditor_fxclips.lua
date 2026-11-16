@@ -258,7 +258,7 @@ end
 -- rt: the finished frame (w x h); the clips at frame f are laid over it, in place. Returns rt.
 function SA.ApplyClips(rt, w, h, f)
 	f = f or SA.frame or 0
-	-- (b0.2.7) under the name that works this session (SPeditor.Render.ShaderName: on Linux a shader
+	-- (b0.2.6-misc.1) under the name that works this session (SPeditor.Render.ShaderName: on Linux a shader
 	-- drawn in one session is dead in the next, so each ships as a copy too); until the names are
 	-- known — a few seconds after the map has loaded — or when neither works, that clip is skipped
 	local R = SPeditor.Render

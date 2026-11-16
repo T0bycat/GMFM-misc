@@ -429,7 +429,7 @@ define({ id = "bloom", cat = "shaders", params = {
 local matSfmBloom
 local function sfmBloomMat()
 	if matSfmBloom then return matSfmBloom end
-	-- (b0.2.7) under the name that works this session (R.ShaderName, cl_render.lua); nil until known
+	-- (b0.2.6-misc.1) under the name that works this session (R.ShaderName, cl_render.lua); nil until known
 	local ps = SPeditor.Render.ShaderName("gmfm_sfmbloom2b")
 	if not ps then return nil end
 	matSfmBloom = CreateMaterial("gmfm_m_" .. ps, "screenspace_general", {

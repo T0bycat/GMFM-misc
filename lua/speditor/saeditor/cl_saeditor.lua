@@ -47,7 +47,7 @@ end
 ---------------------------------------------------------------------
 -- Bone keys (a0.6): a key may hold only some parts of a model, and each part moves between its
 -- own keys (as in SFM). Auto key after a drag keys only the bones the drag moved, and a bone's
--- row on the timeline keys that bone alone; K keys the whole pose. (b0.2.7: the Bone keys mode
+-- row on the timeline keys that bone alone; K keys the whole pose. (b0.2.6-misc.1: the Bone keys mode
 -- that once switched this on is gone, the opened-out tracks do its work.)
 -- A part is "p<i>" — physics body i of a ragdoll ("p0" — its root, the whole ragdoll) — or
 -- "b<i>" — the offset of bone i.
@@ -438,7 +438,7 @@ function SA.SetKey(ents, frame, quiet, parts)
 	for _, e in ipairs(ents) do
 		local uid = SA.UID(e)
 		-- a time selection takes the edit over it, also from auto key's keys of some parts only
-		-- (b0.2.7: those bypassed the Motion Editor); the parts the edit did not change stay
+		-- (b0.2.6-misc.1: those bypassed the Motion Editor); the parts the edit did not change stay
 		if uid ~= 0 and ts then
 			sendKey(id, OP.MOTION, uid, frame, 0, SA.TimeSelString(ts))
 		elseif uid ~= 0 then
@@ -457,7 +457,7 @@ end
 -- A key of the face only (Shift+K). The first one starts the object's face track: from then
 -- on its face is animated by these keys alone, and the body keys leave the face as it is —
 -- the face can get its own rhythm (a blink, a line of speech) over a slow body motion.
--- parts (b0.2.7): "f12,f30" — a key of these face sliders only (the row of a slider)
+-- parts (b0.2.6-misc.1): "f12,f30" — a key of these face sliders only (the row of a slider)
 function SA.SetFaceKey(ents, frame, quiet, parts)
 	ents = ents or C.SelectionList()
 	local list = {}
@@ -753,14 +753,14 @@ end
 -- Auto key: any edit of the scene (everything that gets into the editor's history) sets
 -- a key for the selected objects at the current frame.
 ---------------------------------------------------------------------
--- An edit of the face sets a face key, not a body key (b0.2.7: also when the object has no face
+-- An edit of the face sets a face key, not a body key (b0.2.6-misc.1: also when the object has no face
 -- track yet — the key starts it; before, it set a body key that held every bone as well).
 local FACE_EDITS = { flex = true, ["face preset"] = true, ["reset face"] = true, eyes = true }
 -- edits of a camera made from the Render window or while looking through it: the camera may
 -- not be selected, and it is keyed all the same
 local CAMERA_EDITS = { ["camera fx"] = true, ["camera fov"] = true, ["camera motion"] = true }
 
--- (b0.2.7) The auto keys waiting for their moment (the edits reach the server first): run at once
+-- (b0.2.6-misc.1) The auto keys waiting for their moment (the edits reach the server first): run at once
 -- by SA.FlushAutoKey before the playhead moves, so they land on the frame of the edit.
 local pendingKeys = {}
 local function later(name, delay, fn)
@@ -793,7 +793,7 @@ local function takeCams()
 	return list
 end
 
--- (b0.2.7) the attributes of a camera edited since its last auto key ("a2,a3"; nil — a field
+-- (b0.2.6-misc.1) the attributes of a camera edited since its last auto key ("a2,a3"; nil — a field
 -- that has no row of its own, or none: the whole camera is keyed)
 local function camParts(cam)
 	local ed = C.editedCam and C.editedCam[cam]
@@ -829,7 +829,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 			end
 			for _, e in ipairs(C.SelectionList()) do
 				if C.CameraRecords(e) and not edited[e] then
-					-- moved or turned by the gizmo: only that attribute (b0.2.7)
+					-- moved or turned by the gizmo: only that attribute (b0.2.6-misc.1)
 					local cp = movedAux and movedAux.map[e]
 					if cp then SA.SetKey({ e }, nil, true, cp) else rec[#rec + 1] = e end
 					seen[e] = true
@@ -840,7 +840,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 		end)
 		return
 	end
-	-- a drag of bones: a key of the bones that moved (the gizmo tells which). b0.2.7: always (it
+	-- a drag of bones: a key of the bones that moved (the gizmo tells which). b0.2.6-misc.1: always (it
 	-- took the Bone keys mode before) — moving the head set a key on every bone, the arms' rows too
 	-- (K still keys the whole pose)
 	local movedAux = C.lastEditAux
@@ -870,7 +870,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 			end
 		end
 		if moved and IsValid(moved.ent) then SA.SetKey({ moved.ent }, nil, true, moved.parts) end
-		-- (b0.2.7) a camera / light / effect moved or turned by the gizmo: only that attribute
+		-- (b0.2.6-misc.1) a camera / light / effect moved or turned by the gizmo: only that attribute
 		if movedAux then
 			for i = #body, 1, -1 do
 				local cp = movedAux.map[body[i]]
@@ -882,7 +882,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 		end
 		if #body > 0 then SA.SetKey(body, nil, true) end
 		if #face > 0 then
-			-- (b0.2.7) a slider edit keys only the sliders that were moved (the lips, not the
+			-- (b0.2.6-misc.1) a slider edit keys only the sliders that were moved (the lips, not the
 			-- brows too); a preset or a reset changes the whole face and keys all of it
 			local edited = C.editedFlex or {}
 			C.editedFlex = {}
@@ -890,7 +890,7 @@ COMP:Hook("SPeditor_HistoryPushed", function(label)
 			for _, e in ipairs(face) do
 				local ids = label == "flex" and edited[e]
 				if label == "eyes" then
-					-- (b0.2.7) where the eyes look: the Eyes row of the face track only
+					-- (b0.2.6-misc.1) where the eyes look: the Eyes row of the face track only
 					SA.SetFaceKey({ e }, nil, true, "e0")
 				elseif ids and next(ids) then
 					local list = {}
@@ -934,7 +934,7 @@ local function animJustMoved() return SA.playing or RealTime() - (SA.animMovedAt
 COMP:Hook("SPeditor_ViewCameraMoved", function(cam)
 	if not (SA.autokey or C.CameraRecords(cam)) or SA.rendering or animJustMoved() or RealTime() - viewSince < 0.5 then return end
 	timer.Create("SAeditor.AutoKeyCam", 0.4, 1, function()
-		-- flown: its place and turn only (b0.2.7), not its FOV and effects too
+		-- flown: its place and turn only (b0.2.6-misc.1), not its FOV and effects too
 		if C.active and IsValid(cam) and (C.GetViewCamera() == cam
 			or (C.secFlown and C.secFlown.ent == cam and RealTime() - C.secFlown.t < 2)) and not animJustMoved() then SA.SetKey({ cam }, nil, true, "a0,a1") end
 	end)
@@ -959,7 +959,7 @@ local function step(d) SA.Seek(math.Clamp(math.floor(SA.frame + 0.5) + d, 0, SA.
 COMP:AddHotkey({ key = KEY_SPACE, fn = function() SA.Play() end, label = "Space", desc = "sa_hk_play" })
 COMP:AddHotkey({ key = KEY_K, fn = function() SA.SetKey() end, desc = "sa_hk_key" })
 COMP:AddHotkey({ key = KEY_K, shift = true, fn = function() SA.SetFaceKey() end, desc = "sa_hk_face_key" })
--- (b0.2.7) X — delete the keys selected on the timeline (as Blender's dope sheet)
+-- (b0.2.6-misc.1) X — delete the keys selected on the timeline (as Blender's dope sheet)
 COMP:AddHotkey({ key = KEY_X, fn = function()
 	local list = SA.SelectedKeys and SA.SelectedKeys() or {}
 	if #list == 0 then return end
@@ -1044,7 +1044,7 @@ COMP:Hook("PostDrawTranslucentRenderables", function(bDepth, bSkybox)
 	if bDepth or bSkybox or not C.active or C.hideUI or C.vpPass ~= "primary" then return end
 	local all = SA.tracks[SA.UID(C.selected)]
 	if not all or #all < 2 then return end
-	-- (b0.2.7) only the keys that hold the place: not those of some bones only, nor a camera's
+	-- (b0.2.6-misc.1) only the keys that hold the place: not those of some bones only, nor a camera's
 	-- keys of its FOV alone (auto key), whose place is just where the object stood then
 	local part = C.IsAux(C.selected) and "a" .. (SA.AttrIndex(C.IsCamera(C.selected) and "camera"
 		or (C.IsLight(C.selected) and "light" or "effect"), "pos") or 0) or "p0"

@@ -36,7 +36,7 @@ function T.List()
 	for _, pat in ipairs(PATTERNS) do
 		for _, f in ipairs(file.Find(pat, "GAME") or {}) do
 			local name = string.StripExtension(string.lower(f))
-			-- not the "x" copies (b0.2.7, R.ShaderName): drawing both names of a shader would leave both
+			-- not the "x" copies (b0.2.6-misc.1, R.ShaderName): drawing both names of a shader would leave both
 			-- dead in the next session on Linux
 			if not seen[name] and (string.find(name, "_ps20b$") or string.find(name, "_ps30$")) and not string.find(name, "x_ps20b$") then
 				seen[name] = true

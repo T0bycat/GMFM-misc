@@ -164,7 +164,7 @@ end
 function SA.IsFaceTrack(id) return id >= SA.FACE end
 function SA.FaceTrack(uid) return uid + SA.FACE end
 
--- (b0.2.7) The attributes of a camera, light or effect key that can have keys of their own, as
+-- (b0.2.6-misc.1) The attributes of a camera, light or effect key that can have keys of their own, as
 -- the bones of a model do: part "a<i>" is field i + 1 of its kind's list (the field of the key's
 -- snapshot, sv_saeditor.lua captureState). The rows of an opened-out track; the row is named
 -- by the language key "sa_attr_<field>".

@@ -451,7 +451,7 @@ local function buildTimeline(page)
 			face = slider or nil, slider = slider or nil }
 	end
 
-	-- (b0.2.7) the Face row opened out: a row for every face slider that changes between the face
+	-- (b0.2.6-misc.1) the Face row opened out: a row for every face slider that changes between the face
 	-- keys or has keys of its own; a key dragged there takes only that slider along
 	local function sliderRows(ent, fid)
 		local str = SA.moving and SA.moving[fid]
@@ -466,13 +466,13 @@ local function buildTimeline(page)
 			end
 		end
 		table.sort(ids, function(x, y) return (ent:GetFlexName(x) or "") < (ent:GetFlexName(y) or "") end)
-		-- (b0.2.7) where the eyes look: a row of its own at the top
+		-- (b0.2.6-misc.1) where the eyes look: a row of its own at the top
 		if string.find(str or "", "e0", 1, true) then partRow(ent, fid, "e0", L("sa_eyes_row"), nil, true) end
 		for _, i in ipairs(ids) do partRow(ent, fid, "f" .. i, ent:GetFlexName(i) or ("#" .. i), nil, true) end
 	end
 
 	-- The order of the bones of a model as its skeleton goes (depth first, a parent before its
-	-- children), as Blender's dope sheet lists them: a bone row stays with its siblings (b0.2.7;
+	-- children), as Blender's dope sheet lists them: a bone row stays with its siblings (b0.2.6-misc.1;
 	-- the selected bone used to jump to the top, the arm above the head)
 	local hierCache = setmetatable({}, { __mode = "k" })
 	local function boneOrder(ent)
@@ -509,7 +509,7 @@ local function buildTimeline(page)
 	--    keys (SA.moving, from the server) or has keys of its own. A key dragged on one of these
 	--    rows takes only that bone along (sv_saeditor.lua, the parts of OP.SHIFT);
 	--  * selected (b0.2.5): the selected bones and the bones with keys of their own, as SFM shows
-	--    the bone channels side by side (b0.2.7: always, the Bone keys mode is gone — a bone's row
+	--    the bone channels side by side (b0.2.6-misc.1: always, the Bone keys mode is gone — a bone's row
 	--    is where a key of that bone alone is set).
 	local function modelRows(ent, uid, expanded)
 		local want, pos = {}, false
@@ -555,7 +555,7 @@ local function buildTimeline(page)
 		end
 	end
 
-	-- (b0.2.7) a camera, light or effect opened out: a row per attribute that changes (SA.ATTRS)
+	-- (b0.2.6-misc.1) a camera, light or effect opened out: a row per attribute that changes (SA.ATTRS)
 	local function attrRows(ent, uid)
 		local str = SA.moving and SA.moving[uid]
 		local own = SA.OwnParts(uid)
@@ -866,7 +866,7 @@ local function buildTimeline(page)
 			nextY = nextY + RH
 			surface.SetDrawColor(((i + scroll) % 2 == 0) and COL.ROW_A or COL.ROW_B)
 			surface.DrawRect(0, y, w, RH)
-			-- (b0.2.7) a bone's row lights up when that bone is selected, not every bone row of the
+			-- (b0.2.6-misc.1) a bone's row lights up when that bone is selected, not every bone row of the
 			-- selected object; the object's row when it is selected
 			local lit
 			if row.bone and row.boneIdx then

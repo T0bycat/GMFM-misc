@@ -85,7 +85,7 @@ function IK.RotateAngle(ang, from, to)
 	return f:AngleEx(u)
 end
 
--- (b0.2.7) A two-link chain from root (links l1, l2) reaching for target, the middle bent
+-- (b0.2.6-misc.1) A two-link chain from root (links l1, l2) reaching for target, the middle bent
 -- toward pole (a direction; only its part square to the root-target line counts). Returns mid,
 -- end, or nil when pole gives no side (then IK.Solve's own bend plane is the one to use).
 function IK.SolveToward(root, l1, l2, target, pole)
@@ -101,7 +101,7 @@ function IK.SolveToward(root, l1, l2, target, pole)
 	return root + dir * (l1 * cosA) + side:GetNormalized() * (l1 * sinA), root + dir * d
 end
 
--- (b0.2.7) ang turned round axis (a unit vector in the world) by deg degrees
+-- (b0.2.6-misc.1) ang turned round axis (a unit vector in the world) by deg degrees
 function IK.RotateAround(ang, axis, deg)
 	local f = rotateVec(ang:Forward(), axis, deg)
 	local u = rotateVec(ang:Up(), axis, deg)
@@ -110,7 +110,7 @@ end
 
 -- The manip angle that turns a bone to the world angle want, its parent being at parentNew.
 -- it = { a0 = the bone's world angle now, parentAng = its parent's, m0ang = its manip angle now }
--- (a bone's local turn is rest * manip). Moved here from cl_gizmo.lua (b0.2.7: the fingers use it).
+-- (a bone's local turn is rest * manip). Moved here from cl_gizmo.lua (b0.2.6-misc.1: the fingers use it).
 function IK.ManipFor(it, want, parentNew)
 	local _, cur = WorldToLocal(vector_origin, it.a0, vector_origin, it.parentAng)     -- rest * m0
 	local _, inv = WorldToLocal(vector_origin, angle_zero, vector_origin, it.m0ang)     -- m0^-1

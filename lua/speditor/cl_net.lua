@@ -618,7 +618,7 @@ function C.SendLightSpawn(ltype, pos, ang, col, radius, brightness, fov)
 	net.SendToServer()
 end
 
--- (b0.2.7) Auto key of a light or effect edited by its sliders: only the attributes that changed
+-- (b0.2.6-misc.1) Auto key of a light or effect edited by its sliders: only the attributes that changed
 -- (SA.ATTRS), as for a camera and for the gizmo (C.lastEditAux); a change of something no row
 -- animates (the light's type, shadows, texture; the effect itself) keys the whole object as before
 local function changedAttrs(ent, kind, fields)
@@ -827,7 +827,7 @@ function C.SendCameraEdit(ent, field, value, now, noHist)
 	if not IsValid(ent) then return end
 	if not noHist then
 		C.lastCameraEdit = ent
-		-- (b0.2.7) the fields edited since the last auto key: it keys only them (SAeditor)
+		-- (b0.2.6-misc.1) the fields edited since the last auto key: it keys only them (SAeditor)
 		C.editedCam = C.editedCam or {}
 		C.editedCam[ent] = C.editedCam[ent] or {}
 		C.editedCam[ent][field] = true

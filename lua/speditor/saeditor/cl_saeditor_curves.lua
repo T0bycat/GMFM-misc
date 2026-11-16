@@ -137,7 +137,7 @@ SA.ReceiveParts("CurveData", function(t)
 	-- an answer for another object (the selection changed meanwhile) is dropped
 	if CV.uid ~= tonumber(t.uid) or CV.part ~= tonumber(t.part) then return end
 	CV.data = { chans = t.chans or {}, keys = SA.FromPages(t.keys) }
-	-- (b0.2.7) the channels each key holds (d = "1101…": a key of some attributes of a camera,
+	-- (b0.2.6-misc.1) the channels each key holds (d = "1101…": a key of some attributes of a camera,
 	-- light or effect only) and the motions of single channels (ce = "3=linear"): every channel
 	-- is drawn between its own keys, as playback moves it
 	local nc = #CV.data.chans
@@ -158,7 +158,7 @@ SA.ReceiveParts("CurveData", function(t)
 		k.chE = chE
 	end
 	CV.data.chKeys = chKeys
-	-- (b0.2.7) the part of each channel (nil: the object's own curves, whose keys are whole keys)
+	-- (b0.2.6-misc.1) the part of each channel (nil: the object's own curves, whose keys are whole keys)
 	if isstring(t.cp) and t.cp ~= "" then
 		CV.data.cp = {}
 		local c = 0
@@ -326,7 +326,7 @@ function SA.BuildCurves(body)
 
 	local function chans() return CV.data and CV.data.chans or {} end
 	local function keys() return CV.data and CV.data.keys or {} end
-	-- the keys of one channel (b0.2.7), and whether a key holds a channel
+	-- the keys of one channel (b0.2.6-misc.1), and whether a key holds a channel
 	local function chKeys(c) return CV.data and CV.data.chKeys and CV.data.chKeys[c] or keys() end
 	local function has(k, c) return not k.has or k.has[c] end
 	local function shown(name) return CV.visible[name] ~= false end
@@ -677,7 +677,7 @@ function SA.BuildCurves(body)
 
 	graph.PickAt = pick           -- what is at a point of the graph (scripts and tests)
 
-	-- (b0.2.7) the part a channel's keys are: deleting or moving one takes that part out of the
+	-- (b0.2.6-misc.1) the part a channel's keys are: deleting or moving one takes that part out of the
 	-- key and leaves the rest (a bone's curve key used to delete every bone's key at that frame)
 	local function partOfChan(c)
 		local cp = CV.data and CV.data.cp

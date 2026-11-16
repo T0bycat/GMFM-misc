@@ -1,5 +1,5 @@
 --[[
-SPeditor — fingers (b0.2.7): the hands of a model found by their bones, the Finger Poser of the
+SPeditor — fingers (b0.2.6-misc.1): the hands of a model found by their bones, the Finger Poser of the
 Animation Set Editor (as GMod's own tool: a dot per finger joint on a picture of the hand) and IK
 for the fingers.
 

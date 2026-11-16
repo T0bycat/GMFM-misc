@@ -1,5 +1,5 @@
 --[[
-SPeditor — auto pose (b0.2.7, after Cascadeur's AutoPosing, as a plain solver: no neural net).
+SPeditor — auto pose (b0.2.6-misc.1, after Cascadeur's AutoPosing, as a plain solver: no neural net).
 
 With Auto pose on (View → Auto pose), a hand pulled by IK takes the body along once the arm
 would have to stretch: the chest bends and turns toward the hand, then the hips, then the body
@@ -22,7 +22,7 @@ local C  = SPeditor.Client
 local cvAuto   = CreateClientConVar("gmfm_autopose", "0", true, false, "Auto pose: a dragged hand takes the body along (0/1)", 0, 1)
 local cvFollow = CreateClientConVar("gmfm_autopose_follow", "1", true, false, "Auto pose: how much the body follows the hand (0..1)", 0, 1)
 function C.AutoPoseOn() return cvAuto:GetBool() end
--- (b0.2.7) Auto pose works through IK (a hand's chain): turning it on turns IK on too
+-- (b0.2.6-misc.1) Auto pose works through IK (a hand's chain): turning it on turns IK on too
 function C.SetAutoPose(on)
 	RunConsoleCommand("gmfm_autopose", on and "1" or "0")
 	if on and C.SetIK and not (C.gizmo and C.gizmo.ik) then C.SetIK(true) end
@@ -41,7 +41,7 @@ local MAX_STEP, MAX_CROUCH, MAX_RISE = 0.35, 0.6, 0.1
 local ITERATIONS = 8
 -- the share of the arm's length where the hand starts to ease in (soft IK)
 local SOFT = 0.1
--- (b0.2.7) how much of its turn in the world the head keeps while the chest bends under it (the
+-- (b0.2.6-misc.1) how much of its turn in the world the head keeps while the chest bends under it (the
 -- eyes stay on what they looked at, as a person reaching does; 0 — it turns with the chest)
 local HEAD_KEEP = 0.6
 

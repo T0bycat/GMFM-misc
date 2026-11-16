@@ -3,12 +3,13 @@
 SPeditor = SPeditor or {}
 SPeditor.Name     = "GM:FM"
 SPeditor.FullName = "Garry's Mod Filmmaker"
-SPeditor.Version = "b0.2.6"
+SPeditor.Version = "b0.2.6-misc.1" -- GMFM-Misc: upstream's version it builds on, then the fork's own release
 SPeditor.VersionBase = "b0.2"   -- the release the patch builds on: About lists its news under the patch's
-SPeditor.VersionPrev = "b0.2.5" -- the patch before this one
+SPeditor.VersionPrev = "b0.2.6" -- the patch before this one
 -- every update since b0.1, newest first: version, release date, prefix of its news in the
 -- language files (About → What's new, b0.2.4)
 SPeditor.History = {
+	{ "b0.2.6-misc.1", "2026-11-16", "about_misc1_" },   -- GMFM-Misc
 	{ "b0.2.6", "2026-10-31", "about_y" },
 	{ "b0.2.5", "2026-10-28", "about_x" },
 	{ "b0.2.4", "2026-10-24", "about_w" },

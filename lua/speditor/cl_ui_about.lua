@@ -79,6 +79,11 @@ local SA = function() return SPeditor.Component("saeditor").SA end
 local function page(id) return function() if not Dock.ShowPage(id) then SPeditor.Notify("#about_link_closed", 0) end end end
 local function topMenu(key) return function() UI.OpenTopMenu(key) end end
 UI.NewsLinks = {
+	-- GMFM-Misc b0.2.6-misc.1
+	about_misc1_2 = { guides = { "posing" }, open = { { "win_ase", page("ase") } } },
+	about_misc1_3 = { guides = { "posing" } },
+	about_misc1_4 = { guides = { "sa_keys" } },
+	about_misc1_5 = { guides = { "sa_keys", "sa_curves" } },
 	about_y1 = { guides = { "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
 	about_y2 = { guides = { "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
 	about_y3 = { guides = { "sa_face" }, open = { { "sa_snd_title", function() SA().OpenSounds() end } } },

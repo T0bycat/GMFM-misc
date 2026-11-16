@@ -27,7 +27,7 @@ local COL_VIEWRING = Color(235, 235, 235)
 local COL_BALL     = Color(255, 255, 255, 60)
 
 C.gizmo = C.gizmo or {}
--- (b0.2.7) world by default, as the gizmo already behaved: nil drew the World button off, so its
+-- (b0.2.6-misc.1) world by default, as the gizmo already behaved: nil drew the World button off, so its
 -- first press seemed to do nothing
 C.gizmo.space = C.gizmo.space or "world"
 -- IK is on from the start (a0.7: people took a limb that would not bend as a bug) and the
@@ -541,7 +541,7 @@ prepareLocks = function(d, tgt)
 				if root and mid ~= tgt.bone and root ~= tgt.bone and moving[C.PhysIndexOfBone(ent, root)]
 					and isDescendant(ent, root, tgt.bone) then
 					local c = { foot = true, chain = items({ root, mid, b }), tail = items(physDescendants(ent, b)) }
-					-- (b0.2.7) the knee keeps bending the way it did at the start, in the world: carried
+					-- (b0.2.6-misc.1) the knee keeps bending the way it did at the start, in the world: carried
 					-- along with the hips it flipped behind the hip-foot line when they pitched
 					-- (auto pose does the same). A straight leg gives no side: the carried one is used.
 					if #c.chain == 3 then
@@ -699,7 +699,7 @@ local function startDrag(tgt, hit)
 		end
 	end
 	if hit.mode == "move" and not d.pole then root, mid = ikChain(tgt) end
-	-- (b0.2.7) Auto pose: a hand pulled past the arm's reach takes the body along (cl_autopose.lua)
+	-- (b0.2.6-misc.1) Auto pose: a hand pulled past the arm's reach takes the body along (cl_autopose.lua)
 	if root and C.AutoPoseOn() and SPeditor.AutoPose.IsHand(tgt.ent, tgt.bone) then
 		local st = SPeditor.AutoPose.Begin(tgt.ent, tgt.bone, root, mid)
 		if st then
@@ -711,7 +711,7 @@ local function startDrag(tgt, hit)
 		d.items = buildIKItems(tgt, root, mid)
 		d.ik = d.items ~= nil
 	elseif hit.mode == "move" and not d.auto then
-		-- (b0.2.7) the middle / last joint of a finger bends the finger (cl_fingers.lua); an own IK
+		-- (b0.2.6-misc.1) the middle / last joint of a finger bends the finger (cl_fingers.lua); an own IK
 		-- chain set on the bone (the bone menu) wins
 		local own = tgt.kind == "manip" and SPeditor.Rig.Custom(tgt.ent:GetModel())[tgt.ent:GetBoneName(tgt.bone) or ""]
 		if tgt.kind == "manip" and not own and not C.gizmo.stretch and (C.gizmo.ik or C.RigOn() or C.AutoPoseOn()) and SPeditor.Fingers then
@@ -1020,7 +1020,7 @@ local function endDrag()
 	if d.kind == "phys" then
 		local root = false
 		for _, it in ipairs(d.items) do
-			-- (b0.2.7) Auto pose sends every body: only those it moved are keyed
+			-- (b0.2.6-misc.1) Auto pose sends every body: only those it moved are keyed
 			if it.physIdx and (not d.auto or (it.p1 and moved(it))) then
 				parts[#parts + 1] = "p" .. it.physIdx
 				root = root or it.physIdx == 0
@@ -1044,7 +1044,7 @@ local function endDrag()
 		end
 	end
 	C.lastEditParts = { ent = d.ent, parts = table.concat(parts, ","), t = RealTime() }
-	-- (b0.2.7) a camera, light or effect dragged: which of its attributes changed — "a0" the place,
+	-- (b0.2.6-misc.1) a camera, light or effect dragged: which of its attributes changed — "a0" the place,
 	-- "a1" the turn (SA.ATTRS). Auto key keys only those: turning a camera set a key of its place too
 	if d.kind == "entity" and d.mode ~= "scale" then
 		local aux = {}

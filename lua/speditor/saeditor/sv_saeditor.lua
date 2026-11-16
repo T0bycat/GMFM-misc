@@ -158,7 +158,7 @@ local function captureFace(ent)
 		local w = SPeditor.FlexGet(ent, i)
 		if math.abs(w) > 0.001 then st.flex[i] = w end
 	end
-	-- (b0.2.7) where the eyes look is the face track's too (its Eyes row, part "e0")
+	-- (b0.2.6-misc.1) where the eyes look is the face track's too (its Eyes row, part "e0")
 	if ent.SPeditor_Eye then st.eye = Vector(ent.SPeditor_Eye) end
 	return st
 end
@@ -295,7 +295,7 @@ local function applyProp(ent, a, b, u, noFace)
 		end
 	end
 
-	-- the eyes (b0.2.7: the face track's when the object has one)
+	-- the eyes (b0.2.6-misc.1: the face track's when the object has one)
 	if not noFace then applyEye(ent, a, b, u) end
 
 	-- colour and opacity (fading in and out)
@@ -578,7 +578,7 @@ local function smoothCamera(ent, tr, frame, half)
 		end
 	end
 	if frame < lo or frame > hi then return end
-	-- (b0.2.7) a field between the keys that hold it: the keys of some attributes only (auto key)
+	-- (b0.2.6-misc.1) a field between the keys that hold it: the keys of some attributes only (auto key)
 	-- leave the others to the keys around them
 	local c = cacheOf(tr)
 	local function field(t, name, mix)
@@ -660,10 +660,10 @@ local function partValue(st, part)
 	if idx == 0 and kind == "p" then return { p = st.pos, a = st.ang } end
 	if kind == "p" then return st.phys and st.phys[idx] end
 	if kind == "b" then return (st.bones or {})[idx] or ZERO_BONE end
-	-- (b0.2.7) a face slider (flex) of a face track key: a number, 0 when the key lacks it
+	-- (b0.2.6-misc.1) a face slider (flex) of a face track key: a number, 0 when the key lacks it
 	if kind == "f" then return (st.flex or {})[idx] or 0 end
 	if kind == "e" then return st.eye end
-	-- (b0.2.7) an attribute of a camera, light or effect (SA.ATTRS)
+	-- (b0.2.6-misc.1) an attribute of a camera, light or effect (SA.ATTRS)
 	if kind == "a" then
 		local field = (SA.ATTRS[st.kind] or {})[idx + 1]
 		return field and st[field]
@@ -705,7 +705,7 @@ local function resolveProp(ent, tr, frame)
 	return st
 end
 
--- (b0.2.7) A face track whose sliders have keys of their own, at a frame: the full face keys
+-- (b0.2.6-misc.1) A face track whose sliders have keys of their own, at a frame: the full face keys
 -- give the base (or the face as it is, when there are none), and every keyed slider is worked
 -- out between its own keys — the slider rows of an opened-out Face row.
 local function resolveFace(ent, tr, frame)
@@ -805,7 +805,7 @@ local function attApply(ent, tr, frame)
 	end
 end
 
--- (b0.2.7) one attribute (SA.ATTRS) between two snapshots -> object
+-- (b0.2.6-misc.1) one attribute (SA.ATTRS) between two snapshots -> object
 local function applyAttr(ent, a, b, u, idx)
 	local field = (SA.ATTRS[a.kind] or {})[idx + 1]
 	if not field or a[field] == nil then return end
@@ -1034,7 +1034,7 @@ local function movingParts(tr)
 	local mc = tr.movingCache
 	if mc and mc.order == tr.order and mc.n == #tr.order and mc.stamp == tr.stamp then return mc.val end
 	-- every part some key names: the root, the bodies of a ragdoll, the moved bones; of a face
-	-- track (b0.2.7) its sliders
+	-- track (b0.2.6-misc.1) its sliders
 	local kind = tr.order[1] and tr.keys[tr.order[1]].st.kind
 	local cand = (kind == "prop") and { p0 = true } or ((kind == "face") and {} or nil)
 	if kind and SA.ATTRS[kind] then
@@ -1179,14 +1179,14 @@ local function dropPart(st, part)
 end
 
 -- "p3,b17" -> { p3 = true, b17 = true } (only parts the object has); nil — none. face: the
--- parts of its face track — its sliders, "f12" (b0.2.7)
+-- parts of its face track — its sliders, "f12" (b0.2.6-misc.1)
 local function auxKind(ent)
 	return S.IsCamera(ent) and "camera" or (S.IsLight(ent) and "light" or (S.IsEffect(ent) and "effect" or nil))
 end
 local function parseParts(ent, list, face)
 	if not IsValid(ent) then return nil end
 	if S.IsAux(ent) then
-		-- (b0.2.7) a camera, light or effect: its attributes, "a2"
+		-- (b0.2.6-misc.1) a camera, light or effect: its attributes, "a2"
 		local attrs = SA.ATTRS[auxKind(ent) or ""]
 		if face or not attrs then return nil end
 		local out = {}
@@ -1237,7 +1237,7 @@ local function setKey(ply, ent, frame, ease, face, parts, def, skip)
 	if not tr then
 		tr = { keys = {}, order = {} }
 		a.tracks[uid] = tr
-		-- (b0.2.7) the first face key starts the face track, and from then on the body keys leave
+		-- (b0.2.6-misc.1) the first face key starts the face track, and from then on the body keys leave
 		-- the face alone: the face they animated is taken over as face keys at their frames, so
 		-- the animation looks as it did
 		if face then
@@ -1277,14 +1277,14 @@ local function setKey(ply, ent, frame, ease, face, parts, def, skip)
 	local e = ease or (old and old.e) or def or "spline"
 	local st
 	if face and parts then
-		-- (b0.2.7) a key of some face sliders only (the row of a slider)
+		-- (b0.2.6-misc.1) a key of some face sliders only (the row of a slider)
 		local now = captureFace(ent)
 		st = (old and old.st.kind == "face") and table.Copy(old.st) or emptyPart(now.pos, now.ang, "face")
 		for part in pairs(parts) do putPart(st, part, partValue(now, part)) end
 	elseif face then
 		st = captureFace(ent)
 	elseif parts and S.IsAux(ent) then
-		-- (b0.2.7) a key of some attributes of a camera / light / effect only. It holds the whole
+		-- (b0.2.6-misc.1) a key of some attributes of a camera / light / effect only. It holds the whole
 		-- snapshot (every field a key of its kind must have), but defines only these
 		local now = capture(ent)
 		if old and old.st.kind == now.kind then
@@ -1413,7 +1413,7 @@ local function motionApply(st, now, base, w, noFlex)
 	if w <= 0 then return end
 	local attrs = SA.ATTRS[st.kind]
 	if attrs then
-		-- (b0.2.7) a camera, light or effect: a key of some attributes only (auto key) takes the
+		-- (b0.2.6-misc.1) a camera, light or effect: a key of some attributes only (auto key) takes the
 		-- edit in those; the fields it does not hold are not read from it
 		local function has(field)
 			local i = SA.AttrIndex(st.kind, field)
@@ -1643,7 +1643,7 @@ local function presetPass(order, orig, preset, sel, strength, seed, extra, put)
 	return changed
 end
 
--- (b0.2.7) one part of a snapshot alone, in the place it has in a snapshot (so the presets treat
+-- (b0.2.6-misc.1) one part of a snapshot alone, in the place it has in a snapshot (so the presets treat
 -- it as they treat the whole: bones, phys, flex…), and back
 local function partAlone(st, part)
 	local kind, idx = partIndex(part)
@@ -1688,7 +1688,7 @@ local function presetTrack(tr, preset, sel, strength, seed, extra)
 		if not c.has then
 			any = presetPass(table.Copy(tr.order), orig, preset, sel, strength, seed, extra, putWhole)
 		else
-			-- (b0.2.7) keys of some parts only (bone keys, auto key): the full keys among themselves,
+			-- (b0.2.6-misc.1) keys of some parts only (bone keys, auto key): the full keys among themselves,
 			-- then every part between the keys that hold it — the neighbours of a bone's key are the
 			-- keys of that bone, not keys of other bones that lack it
 			any = presetPass(table.Copy(c.full), orig, preset, sel, strength, seed, extra, putWhole)
@@ -3353,7 +3353,7 @@ end)
 --   of a ragdoll is its place and turn relative to the ragdoll's root, any other bone — its offset.
 ---------------------------------------------------------------------
 local CH_XYZ = { "x", "y", "z", "pitch", "yaw", "roll" }
--- (b0.2.7) the attribute (SA.ATTRS) a channel of a camera, light or effect shows
+-- (b0.2.6-misc.1) the attribute (SA.ATTRS) a channel of a camera, light or effect shows
 local CH_ATTR = { x = "pos", y = "pos", z = "pos", pitch = "ang", yaw = "ang", roll = "ang",
 	fov = "fov", bri = "bri", radius = "radius", lfov = "fov", time = "time", fxscale = "scale" }
 
@@ -3440,7 +3440,7 @@ local function sendCurve(ply, uid, part)
 	local out = { uid = uid, part = part, keys = {} }
 	if tr and IsValid(ent) and #tr.order > 0 then
 		local kind, idx = partOf(ent, part)
-		-- bone keys: only the keys that hold this part are its keys. (b0.2.7) A camera, light or
+		-- bone keys: only the keys that hold this part are its keys. (b0.2.6-misc.1) A camera, light or
 		-- effect: each channel is the attribute it shows (x y z — "pos"…), and a key of some
 		-- attributes only (auto key) is a key of those channels only: d = "1101…" says which
 		local pid = (kind == "root") and "p0" or ((kind == "phys") and ("p" .. idx) or ("b" .. idx))
@@ -3468,7 +3468,7 @@ local function sendCurve(ply, uid, part)
 			end
 		end
 	end
-	-- (b0.2.7) the part each channel is (a bone's or a body's curves: that bone; a camera's x y z:
+	-- (b0.2.6-misc.1) the part each channel is (a bone's or a body's curves: that bone; a camera's x y z:
 	-- "a0"…), so that deleting or moving a key in the Graph Editor takes that part only, as on the
 	-- bone's row of the timeline. Not for an object's own curves: its row's key is the whole key.
 	if out.chans and tr and IsValid(ent) then

@@ -645,7 +645,7 @@ local floatTargets = {}
 local function getFloatRT(name, w, h)
 	local rt = floatTargets[name]
 	if not rt then
-		-- (b0.2.7) the format that works on this system (R.AccumFormat): float on Windows; on
+		-- (b0.2.6-misc.1) the format that works on this system (R.AccumFormat): float on Windows; on
 		-- Linux a float target came back black, and every render with it
 		local fmt, tag = R.AccumFormat()
 		rt = GetRenderTargetEx("speditor_" .. name .. tag, w, h, RT_SIZE_LITERAL, MATERIAL_RT_DEPTH_NONE, 4 + 8, 0, fmt)
@@ -670,7 +670,7 @@ local function drawFull(mat, rt, alpha)
 	render.DrawScreenQuad()
 end
 
--- (b0.2.7) Does a target of this format take a frame laid on as the averaging lays it, and give
+-- (b0.2.6-misc.1) Does a target of this format take a frame laid on as the averaging lays it, and give
 -- it back? An 8-bit frame of a known colour is blended into it and copied out to 8 bits again.
 -- On Linux (the D3D -> OpenGL layer) float targets passed every step and came back black: the
 -- renders, their preview and the saved pictures were black (gmfm_rendertest, steps 3 and 4).
@@ -721,7 +721,7 @@ function R.AccumFormat()
 end
 
 ---------------------------------------------------------------------
--- (b0.2.7) Linux / macOS: the editor's shaders under two names (R.ShaderName).
+-- (b0.2.6-misc.1) Linux / macOS: the editor's shaders under two names (R.ShaderName).
 -- The game there (shaderapidx9, mat_autoload_glshaders / mat_autosave_glshaders) writes every
 -- pair of shaders it drew into glshaders.cfg and builds them all again when the next session
 -- starts — before the addon is mounted, so an addon's shader is not found then and is marked
@@ -1323,7 +1323,7 @@ function R.RenderBase(src, W, H, opts)
 end
 
 ---------------------------------------------------------------------
--- (b0.2.7) gmfm_rendertest: the stages of a render one by one, each read back as the colour of
+-- (b0.2.6-misc.1) gmfm_rendertest: the stages of a render one by one, each read back as the colour of
 -- the middle pixel — to find where a render goes black (Linux: renders and their preview came
 -- out black while the viewports were fine). Prints to the console; nothing is saved.
 ---------------------------------------------------------------------

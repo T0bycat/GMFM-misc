@@ -236,7 +236,7 @@ function UI.BuildASE(body)
 	local cur = { ent = nil, scope = "all" }   -- what the presets and controls show
 	local rebuildControls, rebuildPresets, rebuildTree, addSkeleton
 
-	-- (b0.2.7) the hand whose Finger Poser is shown: the selected hand or finger bone, or the
+	-- (b0.2.6-misc.1) the hand whose Finger Poser is shown: the selected hand or finger bone, or the
 	-- fingers' group / the hand's bone picked in the tree
 	local function handSide(ent)
 		local F = SPeditor.Fingers
@@ -547,7 +547,7 @@ function UI.BuildASE(body)
 			return
 		end
 
-		-- (b0.2.7) a hand selected: GMod's finger presets for it
+		-- (b0.2.6-misc.1) a hand selected: GMod's finger presets for it
 		local hand = cur.hand and SPeditor.Fingers.Hands(ent)[cur.hand]
 		if hand then
 			local F = SPeditor.Fingers
@@ -683,7 +683,7 @@ function UI.BuildASE(body)
 		end
 	end
 
-	-- (b0.2.7) the Finger Poser (as GMod's tool): a dot per joint, the curl of the whole hand
+	-- (b0.2.6-misc.1) the Finger Poser (as GMod's tool): a dot per joint, the curl of the whole hand
 	local function fingerControls(ent, side)
 		local F = SPeditor.Fingers
 		local hand = F.Hands(ent)[side]
@@ -1607,7 +1607,7 @@ function UI.BuildASE(body)
 				tree:SetSelectedItem(node)
 			end
 		elseif handSide(ent) ~= cur.hand then
-			-- (b0.2.7) a hand picked or left on the same model: its Finger Poser comes or goes
+			-- (b0.2.6-misc.1) a hand picked or left on the same model: its Finger Poser comes or goes
 			rebuildPresets()
 			rebuildControls()
 		end

@@ -48,7 +48,7 @@ local cvPasses   = CreateClientConVar("gmfm_ssao_passes", "16", true, false,
 	"Progressive ambient occlusion of renders (SFM's mode): passes with new directions, averaged (1 = one pass)", 1, 64)
 
 local SSAO_FAR = 8192            -- the far end of the depth pass, units
--- (b0.2.7) Linux / macOS: the depth is packed into 8-bit channels (see depthRT below)
+-- (b0.2.6-misc.1) Linux / macOS: the depth is packed into 8-bit channels (see depthRT below)
 local PACKED = not system.IsWindows()
 
 function R.SSAOOn() return cvOn:GetBool() end
@@ -95,9 +95,9 @@ local matDepthWorld = CreateMaterial("speditor_ao_depth_world", "UnlitGeneric", 
 local matDepthModel = CreateMaterial("speditor_ao_depth_model", "UnlitGeneric", {
 	["$basetexture"] = "vgui/white", ["$model"] = "1", ["$color2"] = "[0 0 0]",
 })
--- rawBase / rawT1 (b0.2.7): that slot holds the packed depth: point sampled (see bandRT). Read
+-- rawBase / rawT1 (b0.2.6-misc.1): that slot holds the packed depth: point sampled (see bandRT). Read
 -- "linear" as every slot here: $linearread 1 / $linearwrite 1 hand the numbers through as they
--- are; 0 turns them from / into sRGB (b0.2.7: set to 0 for the packed depth, it distorted it)
+-- are; 0 turns them from / into sRGB (b0.2.6-misc.1: set to 0 for the packed depth, it distorted it)
 local function screenMat(name, ps, rawBase, rawT1)
 	return CreateMaterial(name, "screenspace_general", {
 		["$pixshader"] = ps,
@@ -106,7 +106,7 @@ local function screenMat(name, ps, rawBase, rawT1)
 		-- in the pushed render target (a custom vs20 put it off the target)
 		["$ignorez"] = "1", ["$vertextransform"] = "1", ["$copyalpha"] = "0",
 		["$linearread_basetexture"] = "1", ["$linearread_texture1"] = "1", ["$linearwrite"] = "1",
-		-- the packed depth (b0.2.7) is read point sampled (see bandRT)
+		-- the packed depth (b0.2.6-misc.1) is read point sampled (see bandRT)
 		["$pointsample_basetexture"] = rawBase and "1" or "0", ["$pointsample_texture1"] = rawT1 and "1" or "0",
 		["$alpha_blend"] = "0", ["$alpha_blend_color_overlay"] = "0",
 	})
@@ -115,12 +115,12 @@ end
 -- game was still starting, they did not get the editor's shaders and drew nothing (white, no
 -- occlusion) for the whole session, in both modes (b0.2 round 6)
 local matAO, matBlur, matSfmAO, matSfmBlur, matPack, matPack2, matSmoothH, matSmoothV
--- (b0.2.7) the packed depth's shaders sample a quarter texel in (c3.xy; shaders_src: g_Texel)
+-- (b0.2.6-misc.1) the packed depth's shaders sample a quarter texel in (c3.xy; shaders_src: g_Texel)
 local function texel(m, W, H)
 	m:SetFloat("$c3_x", 0.25 / W)
 	m:SetFloat("$c3_y", 0.25 / H)
 end
--- (b0.2.7, Linux / macOS) The shaders of the packed depth and the occlusion, under the name that
+-- (b0.2.6-misc.1, Linux / macOS) The shaders of the packed depth and the occlusion, under the name that
 -- works this session (R.ShaderName, cl_render.lua: a shader drawn in one session there is dead in
 -- the next, so each also ships as a copy). The occlusion waits until they are known, and is off
 -- when one of them works under neither name.
@@ -150,7 +150,7 @@ local function ensureMats()
 	-- "2": the shaders were fixed (a NaN made the whole frame lose its AO) — a new name, so a
 	-- game that has loaded the old ones in this session or keeps them cached takes the new ones
 	if PACKED then
-		-- (b0.2.7) the packed 8-bit depth of Linux / macOS: the *_pk shaders, depth read raw
+		-- (b0.2.6-misc.1) the packed 8-bit depth of Linux / macOS: the *_pk shaders, depth read raw
 		-- the name of each shader that works this session (R.ShaderName); the material is named
 		-- after it, so a session never takes a material made for the other name
 		local function sh(base) return R.ShaderName(base) end
@@ -190,7 +190,7 @@ local FORMAT_R32F = IMAGE_FORMAT_R32F or 27
 -- (measured in game: 46% of the frame darkened against 8% — the real contacts — with R32F)
 -- Linux / macOS (the D3D -> OpenGL layer, ToGL, DirectX level 90): R32F cannot be a render
 -- target there (the engine fell back to 24-bit RGB, which ToGL cannot make — the game closed), and
--- no float or 16-bit target takes any drawing at all: every one came back black (b0.2.7,
+-- no float or 16-bit target takes any drawing at all: every one came back black (b0.2.6-misc.1,
 -- gmfm_rendertest, 48 kinds of target tried). Only 8-bit targets work. So the depth is PACKED:
 -- three fog passes, ending at a quarter of the range, a sixteenth and a sixty-fourth, each into an
 -- 8-bit target, packed into one (R, G, B — gmfm_depthpack); the *_pk shaders read the finest
@@ -202,7 +202,7 @@ local BANDS = { 4, 16, 64 }      -- the fog of pass k ends at SSAO_FAR / BANDS[k
 local DEPTH_FORMAT = PACKED and IMAGE_FORMAT_RGBA8888 or FORMAT_R32F
 local DEPTH_NAME = PACKED and "gmfm_aodepthpk_" or "speditor_aodepth32_"
 function R.SSAOPacked() return PACKED end
--- (b0.2.7, gmfm_rendertest) does the depth target of this system give back what is put in?
+-- (b0.2.6-misc.1, gmfm_rendertest) does the depth target of this system give back what is put in?
 function R.SSAODepthTest()
 	local ok, got = R.ProbeFormat(DEPTH_FORMAT)
 	return string.format("format %s%s: %s (%s)", tostring(DEPTH_FORMAT), PACKED and " (packed, 3 passes)" or "",
@@ -234,7 +234,7 @@ end
 local accRTs = {}
 local function accRT(w, h)
 	local key = w .. "x" .. h
-	-- (b0.2.7) the format that works here (R.AccumFormat): a float one came back black on Linux
+	-- (b0.2.6-misc.1) the format that works here (R.AccumFormat): a float one came back black on Linux
 	local fmt, tag = R.AccumFormat()
 	accRTs[key] = accRTs[key] or GetRenderTargetEx("gmfm_aoacc" .. tag .. "_" .. key, w, h, RT_SIZE_LITERAL,
 		MATERIAL_RT_DEPTH_NONE, 4 + 8, 0, fmt)
@@ -247,7 +247,7 @@ local matAccum = CreateMaterial("gmfm_ao_accum", "UnlitGeneric", { ["$nolod"] = 
 -- The depth pass
 ---------------------------------------------------------------------
 local depthPass = false
-local bandDiv = 1            -- (b0.2.7) the packed depth's pass: its fog ends at SSAO_FAR / bandDiv
+local bandDiv = 1            -- (b0.2.6-misc.1) the packed depth's pass: its fog ends at SSAO_FAR / bandDiv
 function R.DepthPassActive() return depthPass end
 
 local function depthFog()
@@ -288,7 +288,7 @@ SPeditor.Hook("PreDrawEffects", "SPeditor.SSAO", function()
 end)
 
 -- The depth of the view src (origin, angles, fov — horizontal for aspect) into a W x H texture.
--- (b0.2.7) Packed (Linux / macOS): three passes of fog ending at SSAO_FAR / 4, / 16 and / 64, packed
+-- (b0.2.6-misc.1) Packed (Linux / macOS): three passes of fog ending at SSAO_FAR / 4, / 16 and / 64, packed
 -- into one 8-bit texture by gmfm_depthpack.
 local depthInto
 function R.RenderDepth(src, W, H, aspect)
