@@ -1254,6 +1254,22 @@ local function buildTimeline(page)
 				w - 10, h - 12, COL.ORANGE, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER, 1, color_black)
 		end
 	end
+	-- (b0.2.6-misc.1) the profiler (sh_prof.lua, gmfm_prof): the timeline's drawing and its rows
+	do
+		local P = SPeditor.Prof
+		tl.Paint = P.Wrap("cl timeline: paint (rows rebuilt inside)", tl.Paint)
+		local inner = buildRows
+		buildRows = function(...)
+			if not P.on then return inner(...) end
+			local t = SysTime()
+			inner(...)
+			P.Add("cl timeline: rebuild rows", SysTime() - t)
+			local nk = 0
+			for _, r in ipairs(rows) do nk = nk + #(r.keys or {}) end
+			P.Gauge("cl timeline rows", #rows)
+			P.Gauge("cl timeline keys on its rows", nk)
+		end
+	end
 
 	-- the menu of a key; a key of a selection of several speaks for all of them
 	local function keyMenu(row, k)

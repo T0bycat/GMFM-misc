@@ -406,7 +406,11 @@ local function partIndex(part) return string.sub(part, 1, 1), tonumber(string.su
 -- The frames of the full keys, and for every part named by some bone key the frames of the
 -- keys that define it. Worked out again when the track changes (its order, its size or its
 -- stamp, which setKey and the part operations bump).
+-- (b0.2.6-misc.1) a new evaluation of a track begins with cacheOf: the spline blends shared by its parts
+-- (segment) last only for that evaluation, so an edit can never meet an old blend
+local memoPass = 0
 local function cacheOf(tr)
+	memoPass = memoPass + 1
 	local c = tr.cache
 	if c and c.order == tr.order and c.n == #tr.order and c.stamp == tr.stamp then return c end
 	c = { order = tr.order, n = #tr.order, stamp = tr.stamp, full = {}, parts = {} }
@@ -554,8 +558,22 @@ local function segment(tr, frame, order, part)
 		local s3 = f3 and tr.keys[f3].st or kb.st
 		if s0.kind ~= ka.st.kind then s0, f0 = ka.st, nil end
 		if s3.kind ~= kb.st.kind then s3, f3 = kb.st, nil end
+		-- (b0.2.6-misc.1) a part's stretch (a bone key, a slider, an attribute) blends the whole snapshot of
+		-- its four keys; parts sharing the same four keys at this frame share the blend: the profiler
+		-- showed ~70 full-pose blends per ragdoll per tick, most of them the same. Only the per-part
+		-- callers (which only read the result) use it, within one evaluation (memoPass).
+		local c, key = part and tr.cache, nil
+		if c then
+			if c.memoFrame ~= frame or c.memoPass ~= memoPass then c.memoFrame, c.memoPass, c.memo = frame, memoPass, {} end
+			key = tostring(f0 or "-") .. ":" .. fa .. ":" .. fb .. ":" .. tostring(f3 or "-")
+			local hit = c.memo[key]
+			if hit then return hit, hit, 0 end
+		end
 		local w0, w1, w2, w3 = SA.SplineWeights(f0 or (2 * fa - fb), fa, fb, f3 or (2 * fb - fa), (frame - fa) / (fb - fa))
 		local st = mixState({ s0, ka.st, kb.st, s3 }, { w0, w1, w2, w3 })
+		if key then c.memo[key] = st end
+		local P = SPeditor.Prof
+		if P.on then P.Count("sv spline blends of a whole snapshot", 1) end
 		return st, st, 0
 	end
 	return ka.st, kb.st, SA.EaseValue(e, (frame - fa) / (fb - fa), bz)
@@ -877,8 +895,16 @@ local function applyTrack(ent, tr, frame, noFace)
 			applyEye(ent, st, st, 0)
 			return
 		end
+		-- (b0.2.6-misc.1) the profiler (sh_prof.lua): working out the pose vs setting it
+		local P = SPeditor.Prof
+		local t = P.on and SysTime()
 		local st = resolveProp(ent, tr, frame)
+		local t2 = t and SysTime()
 		if st then applyProp(ent, st, st, 0, noFace) end
+		if t then
+			P.Add("sv per-part track: pose from the keys", t2 - t)
+			P.Add("sv per-part track: set bodies and bones", SysTime() - t2)
+		end
 		return
 	end
 	local a, b, u = segment(tr, frame)
@@ -980,13 +1006,25 @@ local function worldRest(a)
 end
 
 function SA.ApplyTracks(a, map, frame)
+	local P = SPeditor.Prof
 	for id, tr in pairs(a.tracks) do
 		local face = SA.IsFaceTrack(id)
 		local ent = map[face and (id - SA.FACE) or id]
 		-- an object whose physics is being recorded (sv_saeditor_record.lua) moves by itself
 		if IsValid(ent) and not ent.SPeditor_PhysRec then
+			local t = P.on and SysTime()
 			local ok, err = pcall(applyTrack, ent, tr, frame, not face and a.tracks[SA.FaceTrack(id)] ~= nil)
 			if not ok then COMP:Print("apply: ", tostring(err)) end
+			-- (b0.2.6-misc.1) the profiler: the time of each kind of track, how many keys and parts it has
+			if t then
+				local kind = face and "face" or (S.IsAux(ent) and "camera/light/effect" or (S.IsRagdoll(ent) and "ragdoll" or "prop"))
+				P.Add("sv apply track: " .. kind, SysTime() - t)
+				P.Count("sv tracks applied", 1)
+				P.Count("sv keys in applied tracks", #tr.order)
+				local np = 0
+				for _ in pairs(cacheOf(tr).parts or {}) do np = np + 1 end
+				P.Count("sv keyed parts evaluated (per-part)", np)
+			end
 		end
 	end
 end
@@ -2646,6 +2684,22 @@ end)
 ---------------------------------------------------------------------
 -- Playback
 ---------------------------------------------------------------------
+-- (b0.2.6-misc.1) the profiler's report head (sh_prof.lua): how big the animation is
+SPeditor.Prof.Context["sv animation"] = function()
+	local nt, nk, nb = 0, 0, 0
+	for _, a in pairs(A) do
+		for _, tr in pairs(a.tracks or {}) do
+			nt = nt + 1
+			nk = nk + #tr.order
+			for _, f in ipairs(tr.order) do
+				local st = tr.keys[f] and tr.keys[f].st
+				if st and st.bones then for _ in pairs(st.bones) do nb = nb + 1 end end
+			end
+		end
+	end
+	return string.format("%d tracks, %d keys, %d bone offsets stored in them; tick %.1f ms", nt, nk, nb, engine.TickInterval() * 1000)
+end
+
 COMP:Hook("Think", function()
 	for ply, a in pairs(A) do
 		if not IsValid(ply) then

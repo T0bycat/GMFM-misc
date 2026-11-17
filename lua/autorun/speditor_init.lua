@@ -3,7 +3,7 @@ SPeditor = SPeditor or {}
 
 local BASE = "speditor/"
 
-local SHARED = { "sh_config", "sh_rename", "sh_errors", "sh_util", "sh_lang", "sh_component", "sh_gamemode" }
+local SHARED = { "sh_prof", "sh_config", "sh_rename", "sh_errors", "sh_util", "sh_lang", "sh_component", "sh_gamemode" }
 local SERVER_FILES = { "sv_net", "sv_speditor", "sv_persistence", "sv_adopt", "sv_pac", "sv_env", "sv_gamemode" }
 local CLIENT_FILES = {
 	"cl_net", "cl_webaudio", "cl_pac", "cl_keys", "cl_scene", "cl_history", "cl_camera", "cl_gizmo",
