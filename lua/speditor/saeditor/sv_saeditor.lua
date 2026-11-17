@@ -525,6 +525,75 @@ local function mixState(sts, ws)
 	return out
 end
 
+-- (b0.2.6-misc.1) What mixState gives for the field k (and its entry id: a body, a bone, a slider), with
+-- the same fill-ins, without blending the rest of the snapshot
+local function mixField(sts, ws, k, id)
+	local a, b = sts[2][k], sts[3][k]
+	if a == nil and b == nil then return nil end
+	if id == nil then return mix({ sts[1][k], a, b, sts[4][k] }, ws) end
+	local def = ZERO_DEFAULT[k]
+	if def ~= nil then
+		-- bones, flexes: an entry missing from a snapshot is zero; one missing from all four is not set
+		local vals, any = {}, false
+		for i = 1, 4 do
+			local t = sts[i][k]
+			local x = istable(t) and t[id] or nil
+			if x ~= nil then any = true else x = def end
+			vals[i] = x
+		end
+		return any and mix(vals, ws) or nil
+	end
+	-- a table of entries (the bodies): mix's own fill-in of a missing table, then the entry
+	local base = a
+	if base == nil then base = b end
+	if not istable(base) then return nil end
+	local v = {}
+	for i = 1, 4 do
+		local x = sts[i][k]
+		if x == nil or type(x) ~= type(base) then x = (i <= 2) and (a or b) or (b or a) end
+		v[i] = x
+	end
+	if v[2][id] == nil and v[3][id] == nil then return nil end
+	return mix({ v[1][id], v[2][id], v[3][id], v[4][id] }, ws, ZERO_DEFAULT[id])
+end
+
+-- (b0.2.6-misc.1) mixState for one part (a body, a bone, a face slider, the eyes, an attribute): a snapshot
+-- holding only what partValue (and the readers of an attribute or the eyes) read of it. A part's
+-- spline stretch blended the whole snapshot before: ~70 times per ragdoll per tick (the profiler).
+-- nil: a part it does not know (mixState then)
+local function mixPart(sts, ws, part)
+	local kind, idx = partIndex(part)
+	if not idx then return nil end
+	local out = {}
+	for k in pairs(COPY_FIELDS) do
+		local v = sts[2][k]
+		if v == nil then v = sts[3][k] end
+		out[k] = v
+	end
+	out.resolved = true
+	local function entry(k)
+		if sts[2][k] ~= nil or sts[3][k] ~= nil then out[k] = { [idx] = mixField(sts, ws, k, idx) } end
+	end
+	if kind == "p" and idx == 0 then
+		out.pos, out.ang = mixField(sts, ws, "pos"), mixField(sts, ws, "ang")
+	elseif kind == "p" then
+		entry("phys")
+	elseif kind == "b" then
+		entry("bones")
+	elseif kind == "f" then
+		entry("flex")
+	elseif kind == "e" then
+		out.eye = mixField(sts, ws, "eye")
+	elseif kind == "a" then
+		local field = (SA.ATTRS[out.kind] or {})[idx + 1]
+		if not field then return nil end
+		if not COPY_FIELDS[field] then out[field] = mixField(sts, ws, field) end
+	else
+		return nil
+	end
+	return out
+end
+
 -- The two snapshots a track gives at the frame frame and the share of the way between them.
 -- order — the frames to look at: the full keys by default (bone keys are left to the parts
 -- they hold); nil when there are none. A spline stretch gives one worked-out snapshot twice.
@@ -562,6 +631,14 @@ local function segment(tr, frame, order, part)
 		-- its four keys; parts sharing the same four keys at this frame share the blend: the profiler
 		-- showed ~70 full-pose blends per ragdoll per tick, most of them the same. Only the per-part
 		-- callers (which only read the result) use it, within one evaluation (memoPass).
+		local w0, w1, w2, w3 = SA.SplineWeights(f0 or (2 * fa - fb), fa, fb, f3 or (2 * fb - fa), (frame - fa) / (fb - fa))
+		local P = SPeditor.Prof
+		-- (b0.2.6-misc.1) a part's stretch: only that part is blended
+		local one = part and mixPart({ s0, ka.st, kb.st, s3 }, { w0, w1, w2, w3 }, part)
+		if one then
+			if P.on then P.Count("sv spline blends of one part", 1) end
+			return one, one, 0
+		end
 		local c, key = part and tr.cache, nil
 		if c then
 			if c.memoFrame ~= frame or c.memoPass ~= memoPass then c.memoFrame, c.memoPass, c.memo = frame, memoPass, {} end
@@ -569,10 +646,8 @@ local function segment(tr, frame, order, part)
 			local hit = c.memo[key]
 			if hit then return hit, hit, 0 end
 		end
-		local w0, w1, w2, w3 = SA.SplineWeights(f0 or (2 * fa - fb), fa, fb, f3 or (2 * fb - fa), (frame - fa) / (fb - fa))
 		local st = mixState({ s0, ka.st, kb.st, s3 }, { w0, w1, w2, w3 })
 		if key then c.memo[key] = st end
-		local P = SPeditor.Prof
 		if P.on then P.Count("sv spline blends of a whole snapshot", 1) end
 		return st, st, 0
 	end
