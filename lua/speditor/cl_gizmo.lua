@@ -533,7 +533,8 @@ prepareLocks = function(d, tgt)
 		if C.gizmo.ikFeet and isFoot(name) then return true end
 		return C.gizmo.ikHands and isHand(name)
 	end
-	if C.gizmo.ik and (C.gizmo.ikFeet or C.gizmo.ikHands) and not d.ik then
+	-- (b0.2.6-misc.1) an Auto pose drag plants them itself (cl_autopose.lua)
+	if C.gizmo.ik and (C.gizmo.ikFeet or C.gizmo.ikHands) and not d.ik and not d.auto then
 		for b = 0, ent:GetBoneCount() - 1 do
 			if b ~= tgt.bone and not locks[b] and planted(ent:GetBoneName(b)) and C.PhysIndexOfBone(ent, b) then
 				local mid = nextPhysAncestor(ent, b)
@@ -700,12 +701,19 @@ local function startDrag(tgt, hit)
 	end
 	if hit.mode == "move" and not d.pole then root, mid = ikChain(tgt) end
 	-- (b0.2.6-misc.1) Auto pose: a hand pulled past the arm's reach takes the body along (cl_autopose.lua)
-	if root and C.AutoPoseOn() and SPeditor.AutoPose.IsHand(tgt.ent, tgt.bone) then
+	-- (a foot too, on a biped)
+	if root and C.AutoPoseOn() and SPeditor.AutoPose.Wants(tgt.ent, tgt.bone) then
 		local st = SPeditor.AutoPose.Begin(tgt.ent, tgt.bone, root, mid)
 		if st then
 			d.auto, d.items = st, st.items
 			root = nil
 		end
+	end
+	-- (b0.2.6-misc.1) Auto pose: the hips, chest, neck or head of a biped moved or turned (not by the trackball)
+	if not d.auto and not d.pole and not root and tgt.kind == "phys" and not d.ball
+		and (hit.mode == "move" or hit.mode == "rotate") and C.AutoPoseActive() then
+		local st = SPeditor.AutoPose.BeginBody(tgt.ent, tgt.bone)
+		if st then d.auto, d.items = st, st.items end
 	end
 	if root then
 		d.items = buildIKItems(tgt, root, mid)
@@ -771,7 +779,7 @@ end
 
 local function applyMove(d, off)
 	if d.auto then
-		SPeditor.AutoPose.Solve(d.auto, d.auto.H.p0 + off)
+		SPeditor.AutoPose.Solve(d.auto, d.auto.E.p0 + off)
 		sendItems(d)
 		return
 	end
@@ -820,6 +828,11 @@ local function applyTurn(d, M)
 end
 
 local function applyRotate(d, total)
+	if d.auto then
+		SPeditor.AutoPose.SolveTurn(d.auto, d.axis, total)
+		sendItems(d)
+		return
+	end
 	if d.viewRing then
 		applyTurn(d, axisMatrix(d.axis, total))
 		return
