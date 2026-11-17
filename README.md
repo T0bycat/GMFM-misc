@@ -50,6 +50,18 @@ How to use the editor is explained inside the game: **Help → How to use**.
 - Drag over empty space to box-select keys (no Shift needed). **X** deletes the selected keys.
 - Press and drag on the frame numbers to scrub the playhead.
 
+### Performance
+- Playing or scrubbing characters with per-bone keys no longer lags. On a smooth stretch between
+  keys, each bone now blends only its own value instead of the whole pose of the four keys around
+  it, once per bone. In a test scene the playback's work went from about 10 ms to about 1 ms per
+  server tick, and the frame time during playback from about 21 ms to about 8 ms (in single
+  player the server runs inside the game).
+- `gmfm_prof 1` turns on a profiler for scenes that play choppily: every 2 seconds
+  (`gmfm_prof 1 <seconds>` to change that) it reports the editor's time per frame and per server
+  tick, the worst frame, its hooks, playback and timeline drawing, and its net messages. Reports go
+  to the console and to `data/speditor/prof_client.txt` / `prof_server.txt`. `gmfm_prof 0` turns
+  it off.
+
 ### Auto key
 - Keys only what you changed: the moved bones, the edited face sliders, the camera's or
   light's edited attribute.
