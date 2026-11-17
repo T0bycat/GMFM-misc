@@ -565,29 +565,44 @@ local function withParts(g, str) return g.parts and ("parts:" .. g.parts .. "|" 
 function SA.MoveKeys(list, by, copy)
 	if by == 0 or #list == 0 then return end
 	local id = nextOp()
-	-- A box over an opened-out track picks a key on its object's row and on its bone rows: it
-	-- moves once, as the whole key (moved twice, the second move found nothing at the frame or
-	-- took the bone out of the moved key). The whole keys go first, then the bone keys left.
-	local whole, groups = {}, {}
-	for _, g in pairs(byTrack(list)) do
-		if not g.parts then
-			whole[g.uid] = whole[g.uid] or {}
-			for _, f in ipairs(g.frames) do whole[g.uid][f] = true end
+	-- A box over an opened-out track picks a key on its object's row, on its group rows and on its
+	-- bone rows: each part moves once (moved twice, the second move found nothing at the frame or
+	-- took the part out of the moved key). The picks of one key are merged first: the whole key if
+	-- it was picked whole, else every part picked on any row (b0.2.6-misc.1: a group row and the rows
+	-- of its bones hold the same parts).
+	local at = {}     -- ["uid|f"] = { uid, f, whole, parts = { [part] = true } }
+	for _, k in ipairs(list) do
+		local key = k.uid .. "|" .. k.f
+		local e = at[key]
+		if not e then
+			e = { uid = k.uid, f = k.f, parts = {} }
+			at[key] = e
 		end
-		groups[#groups + 1] = g
+		if not k.parts then
+			e.whole = true
+		else
+			for part in string.gmatch(k.parts, "[pbfae]%d+") do e.parts[part] = true end
+		end
 	end
-	table.sort(groups, function(x, y) return (x.parts == nil) and (y.parts ~= nil) end)
-	for _, g in ipairs(groups) do
-		local frames = g.frames
-		if g.parts and whole[g.uid] then
-			frames = {}
-			for _, f in ipairs(g.frames) do
-				if not whole[g.uid][f] then frames[#frames + 1] = f end
-			end
+	local groups = {}
+	for _, e in pairs(at) do
+		local parts
+		if not e.whole then
+			parts = table.GetKeys(e.parts)
+			table.sort(parts)
+			parts = table.concat(parts, ",")
 		end
-		if #frames > 0 then
-			sendKey(id, OP.SHIFT, g.uid, copy and 1 or 0, by, withParts(g, table.concat(frames, ",")))
-		end
+		local gk = e.uid .. "|" .. (parts or "")
+		groups[gk] = groups[gk] or { uid = e.uid, parts = parts, frames = {} }
+		table.insert(groups[gk].frames, e.f)
+	end
+	local order = {}
+	for _, g in pairs(groups) do order[#order + 1] = g end
+	-- the whole keys go first, then the parts (as before)
+	table.sort(order, function(x, y) return (x.parts == nil) and (y.parts ~= nil) end)
+	for _, g in ipairs(order) do
+		table.sort(g.frames)
+		sendKey(id, OP.SHIFT, g.uid, copy and 1 or 0, by, withParts(g, table.concat(g.frames, ",")))
 	end
 	pushHistory(copy and "sa paste" or "sa key move", id)
 end

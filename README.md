@@ -47,6 +47,10 @@ How to use the editor is explained inside the game: **Help → How to use**.
 ### Timeline
 - Double-click a track to open it out into a row per moving bone, face slider, or camera /
   light / effect attribute (FOV, colour…). A key dragged on one of those rows moves only that part.
+- A character's bone rows sit in folding groups by body part: Body, Left arm, Left hand (a group
+  per finger), Left leg… and Other. A group's row holds the keys of all its bones, and a key dragged
+  there moves them together. Shift + click on an arrow opens or folds everything under it, and the
+  group of a selected bone opens by itself. Skeletons without hands or feet get a group per branch.
 - Drag over empty space to box-select keys (no Shift needed). **X** deletes the selected keys.
 - Press and drag on the frame numbers to scrub the playhead.
 

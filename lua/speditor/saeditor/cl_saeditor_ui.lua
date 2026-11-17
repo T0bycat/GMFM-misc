@@ -441,14 +441,14 @@ local function buildTimeline(page)
 		return (string.gsub(ent:GetBoneName(bone) or "", "^ValveBiped%.Bip01_", ""))
 	end
 	-- a row of parts under its object; once per object and list of parts
-	local function partRow(ent, uid, parts, name, boneIdx, slider)
+	local function partRow(ent, uid, parts, name, boneIdx, slider, depth)
 		for i = #rows, 1, -1 do
 			local r = rows[i]
 			if r.uid ~= uid then break end
-			if r.parts == parts then return end
+			if r.parts == parts and not r.group then return end
 		end
 		rows[#rows + 1] = { uid = uid, ent = ent, parts = parts, bone = true, boneIdx = boneIdx, name = name, keys = partKeys(uid, parts),
-			face = slider or nil, slider = slider or nil }
+			face = slider or nil, slider = slider or nil, depth = depth }
 	end
 
 	-- (b0.2.6-misc.1) the Face row opened out: a row for every face slider that changes between the face
@@ -504,6 +504,15 @@ local function buildTimeline(page)
 		return order
 	end
 
+	-- the selected bones of the selected model
+	local function selectedBones()
+		local sel = C.SelectedBones and C.SelectedBones() or {}
+		if #sel == 0 and C.selBone >= 0 then sel = { C.selBone } end
+		return sel
+	end
+	-- groups folded by hand while a bone in them is selected: they stay folded until the selection changes
+	local folded = {}
+
 	-- The bone rows of a model, in the order of its skeleton:
 	--  * opened out (a double click on its name): Position, then every bone that moves between the
 	--    keys (SA.moving, from the server) or has keys of its own. A key dragged on one of these
@@ -533,9 +542,7 @@ local function buildTimeline(page)
 		end
 		if ent == C.selected then
 			do
-				local sel = C.SelectedBones and C.SelectedBones() or {}
-				if #sel == 0 and C.selBone >= 0 then sel = { C.selBone } end
-				for _, b in ipairs(sel) do
+				for _, b in ipairs(selectedBones()) do
 					if b >= 0 and not want[b] then want[b] = SA.BoneParts(ent, b) end
 				end
 				for kind, idx in string.gmatch(own or "", "([pb])(%d+)") do
@@ -545,14 +552,61 @@ local function buildTimeline(page)
 				end
 			end
 		end
-		local bones = {}
-		for b in pairs(want) do bones[#bones + 1] = b end
-		local order = boneOrder(ent)
-		table.sort(bones, function(x, y) return (order[x] or x) < (order[y] or y) end)
 		if pos then partRow(ent, uid, "p0", L("sa_row_position"), -1) end
-		for _, b in ipairs(bones) do
-			if want[b] then partRow(ent, uid, want[b], boneName(ent, b), b) end
+		if not next(want) then return end
+		-- (b0.2.6-misc.1) the bones in groups by body part (cl_saeditor_groups.lua): Body, Left arm,
+		-- Left hand (a group per finger)… A group's row holds the keys of all its bones and a key dragged
+		-- there takes them all along. A group opens with its arrow or a double click; one holding a
+		-- selected bone is open while that bone is selected (unless folded by hand since).
+		local G = SA.BoneGroups(ent)
+		local order = boneOrder(ent)
+		local function byOrder(x, y) return (order[x] or x) < (order[y] or y) end
+		local byNode, direct = {}, {}
+		for b in pairs(want) do
+			local id = G.of[b]
+			if id and G.nodes[id] then
+				byNode[id] = byNode[id] or {}
+				table.insert(byNode[id], b)
+			else
+				direct[#direct + 1] = b
+			end
 		end
+		for _, list in pairs(byNode) do table.sort(list, byOrder) end
+		table.sort(direct, byOrder)
+		local sel = {}
+		if ent == C.selected then
+			for _, b in ipairs(selectedBones()) do sel[b] = true end
+		end
+		local function collect(nd, out)
+			for _, b in ipairs(byNode[nd.id] or {}) do out[#out + 1] = b end
+			for _, k in ipairs(nd.kids) do collect(k, out) end
+			return out
+		end
+		local function emit(nd, depth)
+			local all = collect(nd, {})
+			if #all == 0 then return end
+			local key = uid .. "|" .. nd.id
+			local open = SA.expanded[key] == true
+			if not open and not folded[key] then
+				for _, b in ipairs(all) do
+					if sel[b] then open = true break end
+				end
+			end
+			local seenPart, list = {}, {}
+			for _, b in ipairs(all) do
+				for part in string.gmatch(want[b], "[pb]%d+") do
+					if not seenPart[part] then seenPart[part] = true list[#list + 1] = part end
+				end
+			end
+			local parts = table.concat(list, ",")
+			rows[#rows + 1] = { uid = uid, ent = ent, parts = parts, bone = true, group = true, node = nd, depth = depth,
+				name = nd.name, keys = partKeys(uid, parts), canExpand = true, expanded = open, openKey = key }
+			if not open then return end
+			for _, b in ipairs(byNode[nd.id] or {}) do partRow(ent, uid, want[b], boneName(ent, b), b, nil, depth + 1) end
+			for _, k in ipairs(nd.kids) do emit(k, depth + 1) end
+		end
+		for _, b in ipairs(direct) do partRow(ent, uid, want[b], boneName(ent, b), b) end
+		for _, nd in ipairs(G.top) do emit(nd, 1) end
 	end
 
 	-- (b0.2.6-misc.1) a camera, light or effect opened out: a row per attribute that changes (SA.ATTRS)
@@ -600,7 +654,8 @@ local function buildTimeline(page)
 			-- canExpand: a model whose keys move some part — the arrow / a double click opens it out
 			local canExpand = ((SA.moving and SA.moving[uid]) or SA.OwnParts(uid)) ~= nil
 			local expanded = canExpand and SA.IsExpanded(uid)
-			rows[#rows + 1] = { uid = uid, ent = ent, name = name, keys = SA.tracks[uid] or {}, indent = indent,
+			local first = #rows + 1
+			rows[first] = { uid = uid, ent = ent, name = name, keys = SA.tracks[uid] or {}, indent = indent,
 				canExpand = canExpand, expanded = expanded }
 			if C.IsAux(ent) then
 				if expanded then attrRows(ent, uid) end
@@ -615,6 +670,7 @@ local function buildTimeline(page)
 					canExpand = fCan, expanded = fOpen }
 				if fOpen then sliderRows(ent, fid) end
 			end
+			for i = first + 1, #rows do rows[i].indent = indent end
 		end
 		local objs = C.BuildEntityList()
 		local nameOf = {}
@@ -664,13 +720,34 @@ local function buildTimeline(page)
 		rowsAt = RealTime()
 	end
 	COMP:Hook("SAeditor_Changed", function() rowsAt = 0 end, "ui")
-	-- open out / fold a track (its bone rows): only the rows are built again
-	local function toggleOpen(uid)
-		SA.ToggleExpanded(uid)
+	-- open out / fold a track (its bone rows) or a group of bones; all: everything below it too
+	-- (Shift + click on the arrow). Only the rows are built again.
+	local function setOpen(key, on)
+		SA.expanded[key] = on or nil
+		folded[key] = (not on) or nil
+	end
+	local function canOpenAll(row)
+		if row.node then return #row.node.kids > 0 end
+		return row.canExpand and not row.face and IsValid(row.ent) and not C.IsAux(row.ent)
+	end
+	local function toggleOpen(row, all)
+		local on = not row.expanded
+		setOpen(row.openKey or row.uid, on)
+		if all and row.node then
+			local function walk(nd)
+				for _, k in ipairs(nd.kids) do
+					setOpen(row.uid .. "|" .. k.id, on)
+					walk(k)
+				end
+			end
+			walk(row.node)
+		elseif all and canOpenAll(row) then
+			for id in pairs(SA.BoneGroups(row.ent).nodes) do setOpen(row.uid .. "|" .. id, on) end
+		end
 		rowsAt = 0
 	end
-	COMP:Hook("SPeditor_Selected", function() rowsAt = 0 end, "ui")
-	COMP:Hook("SPeditor_MultiChanged", function() rowsAt = 0 end, "ui")
+	COMP:Hook("SPeditor_Selected", function() rowsAt = 0 folded = {} end, "ui")
+	COMP:Hook("SPeditor_MultiChanged", function() rowsAt = 0 folded = {} end, "ui")
 
 	-- the visible part of the time: frames v0 … v0 + vlen (Ctrl + wheel zooms, Shift + wheel or the middle
 	-- button scrolls); vlen = nil — the whole animation. Since a0.9 the view is endless, as in SFM:
@@ -720,6 +797,23 @@ local function buildTimeline(page)
 	SA.TimelineHome = function()
 		v0, vlen = 0, nil
 		SA.Seek(0)
+	end
+	-- the tree line of a bone row: a face slider one step in, a bone in a group a step per group
+	local DEPTH_STEP = 14
+	local function branchX(row)
+		local ind = row.indent and UI.S(14) or 0
+		if row.slider then return ind + 32 end
+		return ind + 12 + ((row.depth or 1) - 1) * DEPTH_STEP
+	end
+	-- the arrow that opens / folds a row: from x0 to x1
+	local function arrowSpan(row)
+		local is = UI.IconSize(ROW_H + 2)
+		if row.group then
+			local lx = branchX(row)
+			return lx + 4, lx + 6 + is + 3
+		end
+		local ax = (row.indent and UI.S(14) or 0) + (row.face and 20 or 0)
+		return ax, ax + is + 3
 	end
 	-- (b0.2.6) rows have heights of their own (the film strip of the Clip Editor is taller)
 	local function rowAt(my)
@@ -1088,12 +1182,21 @@ local function buildTimeline(page)
 				end
 				clip(false)
 			elseif row.bone then
-				-- a bone of the object above (a face slider: of the Face row above, one step further in)
-				local dx = row.slider and 20 or 0
+				-- a bone of the object above (a face slider: of the Face row above, one step further in;
+				-- a bone in a group: a step further in per group)
+				local lx = branchX(row)
 				surface.SetDrawColor(COL.DIM)
-				surface.DrawRect(12 + dx, y + 2, 1, RH / 2 - 2)
-				surface.DrawRect(12 + dx, y + RH / 2, 8, 1)
-				draw.SimpleText(row.name, "SPeditor.Small", 24 + dx, y + RH / 2, COL.TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+				surface.DrawRect(lx, y + 2, 1, RH / 2 - 2)
+				surface.DrawRect(lx, y + RH / 2, 8, 1)
+				local tx = lx + 12
+				if row.group then
+					local is = UI.IconSize(RH + 2)
+					surface.SetDrawColor(255, 255, 255, 255)
+					surface.SetMaterial(row.expanded and matOpen or matShut)
+					surface.DrawTexturedRect(lx + 6, y + math.floor((RH - is) / 2), is, is)
+					tx = lx + 6 + is + 2
+				end
+				draw.SimpleText(row.name, "SPeditor.Small", tx, y + RH / 2, COL.TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 			else
 				local ind = row.indent and UI.S(14) or 0
 				if ind > 0 then
@@ -1287,7 +1390,7 @@ local function buildTimeline(page)
 		end
 		m:AddOption(L(many and "sa_copy_keys" or "sa_copy_key"), function() SA.keyClip = list end):SetIcon("icon16/page_copy.png")
 		m:AddSpacer()
-		m:AddOption(L(row.bone and "sa_bone_key_delete" or (many and "sa_keys_delete" or "sa_key_delete")), function()
+		m:AddOption(L(row.group and "sa_grp_key_delete" or (row.bone and "sa_bone_key_delete" or (many and "sa_keys_delete" or "sa_key_delete"))), function()
 			SA.DeleteKeys(list)
 			clearSel()
 		end):SetIcon("icon16/key_delete.png")
@@ -1358,7 +1461,7 @@ local function buildTimeline(page)
 
 	local function rowMenu(row, frame)
 		local m = UI.Menu()
-		m:AddOption(L(row.bone and "sa_bone_key_here" or "sa_key_here") .. "  (" .. frame .. ")", function()
+		m:AddOption(L(row.group and "sa_grp_key_here" or (row.bone and "sa_bone_key_here" or "sa_key_here")) .. "  (" .. frame .. ")", function()
 			if not IsValid(row.ent) then return end
 			if row.face then SA.SetFaceKey({ row.ent }, frame, nil, row.parts) else SA.SetKey({ row.ent }, frame, nil, row.parts) end
 		end):SetIcon("icon16/key_add.png")
@@ -1380,7 +1483,7 @@ local function buildTimeline(page)
 		end
 		if #row.keys > 0 and row.bone then
 			m:AddSpacer()
-			m:AddOption(L("sa_bone_clear"), function()
+			m:AddOption(L(row.group and "sa_grp_clear" or "sa_bone_clear"), function()
 				local list = {}
 				for _, k in ipairs(row.keys) do list[#list + 1] = { uid = row.uid, f = k.f, parts = row.parts } end
 				SA.DeleteKeys(list)
@@ -1391,8 +1494,12 @@ local function buildTimeline(page)
 		end
 		if row.canExpand then
 			m:AddSpacer()
-			m:AddOption(L(row.expanded and "sa_track_fold" or "sa_track_open"), function() toggleOpen(row.uid) end)
+			m:AddOption(L(row.expanded and "sa_track_fold" or "sa_track_open"), function() toggleOpen(row) end)
 				:SetIcon("icon16/application_view_list.png")
+			if canOpenAll(row) then
+				m:AddOption(L("sa_track_open_all"), function() row.expanded = false toggleOpen(row, true) end)
+				m:AddOption(L("sa_track_fold_all"), function() row.expanded = true toggleOpen(row, true) end)
+			end
 		end
 		if not row.face and not row.bone and IsValid(row.ent) then trackMenu(m, row.ent) end
 		m:Open()
@@ -1742,18 +1849,25 @@ local function buildTimeline(page)
 			if row and IsValid(row.ent) then
 				-- a track that can open out: the arrow, or a double click on the name, opens / folds it
 				if code == MOUSE_LEFT and row.canExpand then
-					local ind = (row.indent and UI.S(14) or 0) + (row.face and 20 or 0)
-					local onArrow = mx >= ind and mx < ind + UI.IconSize(ROW_H + 2) + 3
-					local double = s.SPLastRow == row.uid and RealTime() - (s.SPLastRowT or 0) < 0.35
-					s.SPLastRow, s.SPLastRowT = row.uid, RealTime()
+					local x0, x1 = arrowSpan(row)
+					local onArrow = mx >= x0 and mx < x1
+					local id = row.openKey or row.uid
+					local double = s.SPLastRow == id and RealTime() - (s.SPLastRowT or 0) < 0.35
+					s.SPLastRow, s.SPLastRowT = id, RealTime()
 					if onArrow or double then
 						s.SPLastRow = nil
-						toggleOpen(row.uid)
+						-- Shift: everything below opens / folds too
+						toggleOpen(row, input.IsKeyDown(KEY_LSHIFT) or input.IsKeyDown(KEY_RSHIFT))
 						if onArrow then return end
 					end
 				end
-				-- a bone's row selects that bone (Position, and the rows of an object: the object)
-				C.Select(row.ent, row.boneIdx or -1)
+				-- a bone's row selects that bone (Position, and the rows of an object: the object); a
+				-- group's row only the object, keeping the selected bones (and so the groups they open)
+				if not row.group then
+					C.Select(row.ent, row.boneIdx or -1)
+				elseif C.selected ~= row.ent then
+					C.Select(row.ent, -1)
+				end
 				if code == MOUSE_RIGHT then rowMenu(row, round(SA.frame)) end
 			end
 			return
