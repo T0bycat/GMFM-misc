@@ -85,7 +85,18 @@ How to use the editor is explained inside the game: **Help → How to use**.
 - **Auto pose** (the button next to IK on the viewport bar, or `gmfm_autopose`): pull a ragdoll's hand past the arm's reach and the
   body follows. The torso bends and turns toward the hand, then the body steps along the floor
   or down into a crouch. Planted feet and hands stay where they are.
-- `gmfm_autopose_follow 0..1` sets how much the body follows. Right-click IK or Auto pose for
+- On a biped (two legs with IK chains on the hips, and a spine up to a head), Auto pose works on
+  the rest of the body too:
+  - **A foot** pulled past the leg's reach: the hips turn toward it around the standing hip, and
+    the chest stays upright.
+  - **The hips** moved: the body goes along. Planted feet stay, and the hips stop where the legs no
+    longer reach. The upper body leans the other way to keep its balance.
+  - **The chest, neck or head** moved: the spine and hips bend toward it, and the hips shift back
+    as far as the bend allows. A dragged head keeps looking where it looked.
+  - **Turned with the rotate rings:** the hips twist and the chest turns back part of the way. A
+    turned chest or head shares the turn with the bodies below it. The trackball turns as before.
+  - Other skeletons (four legs, no head) keep the plain drag.
+- `gmfm_autopose_follow 0..1` sets how much the body follows (0 turns all of it off). Right-click IK or Auto pose for
   one menu with IK, Auto pose, feet planted and hands planted.
 
 ### Viewports
