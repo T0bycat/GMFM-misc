@@ -1122,6 +1122,7 @@ SPeditor.AddLanguage({
 		props_wid = "宽度（Y）",
 		pv_bones = "骨骼",
 		pv_tab_render = "渲染", pv_tab_seq = "序列", pv_tab_act = "活动", pv_tab_skin = "皮肤",
+		pv_loading = "正在加载模型……（第一次需要一点时间）",
 		pv_wire = "线框", pv_collision = "碰撞模型", pv_noground = "无地面", pv_lock = "锁定视图", pv_lookcam = "看向摄像机",
 		pv_seq_filter = "序列", pv_act_filter = "活动", pv_skin_filter = "皮肤",
 		pv_fx_broken = "这个粒子系统无法启动",
