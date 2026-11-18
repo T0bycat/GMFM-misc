@@ -1197,6 +1197,39 @@ local function remapY(d, from, to)
 	return out
 end
 
+-- (b0.2.6-misc.1) A layout saved right after the game's resolution grew (before the editor
+-- followed such a change) holds the old screen's pixels as fractions of the new one: the docked
+-- windows begin in the top left corner and end well short of the right and the bottom (1080p →
+-- 1440p: at 75 %). The docked windows are stretched back over the work area. Both edges short and
+-- the corner kept: a gap the player left on one side is not touched.
+local function shrunkFit(data, from, to)
+	local same = function(d) return d end
+	local l, t, r, b
+	for _, d in pairs(data.windows) do
+		if type(d) == "table" and d.visible and not d.floating and tonumber(d.x) and tonumber(d.w) then
+			local dd = remapY(d, from, to)
+			local x, y = tonumber(dd.x), tonumber(dd.y) or 0
+			l, t = math.min(l or x, x), math.min(t or y, y)
+			r = math.max(r or 0, x + tonumber(dd.w))
+			b = math.max(b or 0, y + (tonumber(dd.h) or 0))
+		end
+	end
+	if not l then return same end
+	local bottom = 1 - to.bottom
+	local nearX, nearY = TOL * 2 / ScrW(), TOL * 2 / ScrH()
+	if l > nearX or math.abs(t - to.top) > nearY then return same end
+	if 1 - r < 0.05 or bottom - b < 0.05 or r <= 0.2 or b - t <= 0.2 then return same end
+	local kx, ky = 1 / r, (bottom - to.top) / (b - to.top)
+	return function(d)
+		local out = table.Copy(d)
+		out.x = (tonumber(d.x) or 0) * kx
+		out.w = (tonumber(d.w) or 0.2) * kx
+		out.y = to.top + ((tonumber(d.y) or 0) - to.top) * ky
+		out.h = (tonumber(d.h) or 0.2) * ky
+		return out
+	end
+end
+
 local function place(win, d)
 	local sw, sh = ScrW(), ScrH()
 	-- rounded, not floored: the fractions of a saved layout are not exact, and flooring took a
@@ -1245,10 +1278,11 @@ function Dock.Apply(data)
 
 	-- 2) sizes, visibility, active tabs (docked windows follow the bars of the present scale)
 	local fromWS, toWS = layoutWS(data), currentWS()
+	local fit = shrunkFit(data, fromWS, toWS)
 	for key, d in pairs(data.windows) do
 		local win = Dock.ByKey(key)
 		if IsValid(win) and type(d) == "table" then
-			place(win, d.floating and d or remapY(d, fromWS, toWS))
+			place(win, d.floating and d or fit(remapY(d, fromWS, toWS)))
 			if d.active and Dock.pages[d.active] and Dock.pages[d.active].win == win then
 				win:SelectPage(d.active)
 			end
