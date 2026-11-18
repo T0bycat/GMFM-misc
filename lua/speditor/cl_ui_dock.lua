@@ -1142,8 +1142,10 @@ local function currentWS()
 	return { top = TOP_Y / sh, bottom = (BOTTOM_H + GAP) / sh }
 end
 
-function Dock.Capture()
-	local sw, sh = ScrW(), ScrH()
+-- sw, sh: the screen the windows were placed on, when that is no longer the present one
+-- (the game's resolution changed under an open editor, b0.2.6-misc.1)
+function Dock.Capture(sw, sh)
+	sw, sh = sw or ScrW(), sh or ScrH()
 	local data = { version = LAYOUT_VERSION, windows = {}, snap = Dock.snap, locked = Dock.locked, ws = Dock.placedWS or currentWS() }
 	for _, w in ipairs(Dock.windows) do
 		if IsValid(w) then
@@ -1306,10 +1308,10 @@ function Dock.List()
 	return out
 end
 
-function Dock.SaveLast()
+function Dock.SaveLast(sw, sh)
 	if #Dock.windows == 0 then return end
 	ensureDir()
-	file.Write(dir() .. "/_last.json", util.TableToJSON(Dock.Capture(), true))
+	file.Write(dir() .. "/_last.json", util.TableToJSON(Dock.Capture(sw, sh), true))
 end
 
 function Dock.RestoreLast()

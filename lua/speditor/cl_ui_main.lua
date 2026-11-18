@@ -1010,6 +1010,7 @@ function UI.Open()
 	Dock.Reset("default")
 	Dock.RestoreLast()
 	UI.builtScale = UI.Scale()
+	UI.builtW, UI.builtH = ScrW(), ScrH()
 	hook.Run("SPeditor_UIBuilt")
 end
 
@@ -1050,7 +1051,8 @@ function UI.ShowCompPage(id)
 end
 
 function UI.Close()
-	if #Dock.windows > 0 then Dock.SaveLast() end
+	-- the layout as fractions of the screen it was built on (it may have changed since)
+	if #Dock.windows > 0 then Dock.SaveLast(UI.builtW, UI.builtH) end
 	setKeyboardInput(false)
 	Dock.Clear()
 	if IsValid(UI.ColorPopup) then UI.ColorPopup:Remove() end
@@ -1086,6 +1088,8 @@ function UI.Rebuild()
 	local fullbright = C.fullbright
 	-- the scale changed: the windows opened by hand get the size they would have at the new one
 	local k = UI.Scale() / (UI.builtScale or UI.Scale())
+	-- the resolution changed: the windows opened by hand keep their place on the screen
+	local kx, ky = ScrW() / (UI.builtW or ScrW()), ScrH() / (UI.builtH or ScrH())
 	local extra = {}
 	for key in pairs(REOPEN) do
 		local w = Dock.ByKey(key)
@@ -1104,10 +1108,22 @@ function UI.Rebuild()
 			local ww = math.min(math.max(math.Round(e.w * k), w.minW or 0), ScrW())
 			local hh = math.min(math.max(math.Round(e.h * k), w.minH or 0), ScrH() - MENU_H - STATUS_H)
 			w:SetSize(ww, hh)
-			w:SetPos(math.Clamp(e.x, 0, ScrW() - ww), math.Clamp(e.y, MENU_H, math.max(ScrH() - STATUS_H - hh, MENU_H)))
+			w:SetPos(math.Clamp(math.Round(e.x * kx), 0, ScrW() - ww),
+				math.Clamp(math.Round(e.y * ky), MENU_H, math.max(ScrH() - STATUS_H - hh, MENU_H)))
 		end
 	end
 end
+
+-- (b0.2.6-misc.1) The game's resolution changed (Options → Video) with the editor open: its bars
+-- and windows were laid out for the old size and stayed in a corner of the new one. The editor
+-- is rebuilt for the new screen; the automatic interface scale follows the height, so the fonts too.
+SPeditor.Hook("OnScreenSizeChanged", "SPeditor.UIResize", function()
+	timer.Create("SPeditor.UIResize", 0.1, 1, function()
+		UI.CreateFonts()
+		local C = SPeditor.Client
+		if C and C.active and UI.builtW and (UI.builtW ~= ScrW() or UI.builtH ~= ScrH()) then UI.Rebuild() end
+	end)
+end)
 
 -- (b0.2.6) The editor's windows are not drawn while a video renders (cl_saeditor_video.lua): every
 -- game frame painted all of them, a few milliseconds each, and a video frame takes several game
