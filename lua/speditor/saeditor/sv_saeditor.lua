@@ -241,8 +241,8 @@ local function applyProp(ent, a, b, u, noFace)
 		for i, w in pairs(world) do setPhys(ent:GetPhysicsObjectNum(i), w[1], w[2]) end
 	else
 		if not ent.SPeditor_Attach and SPeditor.ValidVec(pos) and SPeditor.ValidAng(ang) then
-			ent:SetPos(pos)
-			ent:SetAngles(ang)
+			-- through S.SetTransform: a vehicle's wheels go with its body (S.RigOf)
+			S.SetTransform(ent, pos, ang)
 		end
 		local sa, sb = a.scale or 1, b.scale or 1
 		if S.CanScale(ent) and (sa ~= 1 or sb ~= 1 or ent.SPeditor_Scale) then S.SetScale(ent, lerpN(sa, sb, u)) end
@@ -525,6 +525,50 @@ local function mixState(sts, ws)
 	return out
 end
 
+-- (b0.2.7) two keys of an object in the same place and turn (a prop, a camera, a light)
+local function sameSpot(a, b)
+	if a.kind == "face" then
+		-- the same face sliders: nothing moves between the two keys
+		for id, w in pairs(a.flex or {}) do
+			if math.abs(w - ((b.flex or {})[id] or 0)) > 1e-4 then return false end
+		end
+		for id, w in pairs(b.flex or {}) do
+			if not (a.flex or {})[id] and math.abs(w) > 1e-4 then return false end
+		end
+		return true
+	end
+	if a.kind ~= "prop" and a.kind ~= "camera" and a.kind ~= "light" then return false end
+	if not (a.pos and b.pos) or a.pos:DistToSqr(b.pos) > 1e-6 then return false end
+	if a.ang and b.ang and (math.abs(math.AngleDifference(a.ang.p, b.ang.p)) > 0.01
+		or math.abs(math.AngleDifference(a.ang.y, b.ang.y)) > 0.01 or math.abs(math.AngleDifference(a.ang.r, b.ang.r)) > 0.01) then
+		return false
+	end
+	-- the same bone offsets, flexes and physics bodies too: only then nothing moves in between
+	if a.kind == "prop" then
+		for id in pairs(a.bones or {}) do
+			local x, y = a.bones[id], (b.bones or {})[id] or ZERO_BONE
+			if x.p:DistToSqr(y.p) > 1e-6 or x.s:DistToSqr(y.s) > 1e-6 then return false end
+		end
+		for id in pairs(b.bones or {}) do
+			if not (a.bones or {})[id] and b.bones[id].p:LengthSqr() > 1e-6 then return false end
+		end
+		for id in pairs(a.flex or {}) do
+			if math.abs((a.flex[id] or 0) - ((b.flex or {})[id] or 0)) > 1e-4 then return false end
+		end
+		for id in pairs(b.flex or {}) do
+			if not (a.flex or {})[id] and math.abs(b.flex[id]) > 1e-4 then return false end
+		end
+		for i, p in pairs(a.phys or {}) do
+			local q = (b.phys or {})[i]
+			if not q or p.p:DistToSqr(q.p) > 1e-6 then return false end
+		end
+		for i, q in pairs(b.phys or {}) do
+			if not (a.phys or {})[i] then return false end
+		end
+	end
+	return true
+end
+
 -- (b0.2.6-misc.1) What mixState gives for the field k (and its entry id: a body, a bone, a slider), with
 -- the same fill-ins, without blending the rest of the snapshot
 local function mixField(sts, ws, k, id)
@@ -621,7 +665,9 @@ local function segment(tr, frame, order, part)
 	local ka, kb = tr.keys[fa], tr.keys[fb]
 	local e, bz = ka.e, ka.bz
 	if part and ka.pe and ka.pe[part] then e, bz = ka.pe[part], nil end
-	if e == "spline" and ka.st.kind == kb.st.kind then
+	-- (b0.2.7) a spline between two keys in the same place stays there: the curve through the keys
+	-- around it overshot past both of them (the object moved away from a held pose and came back)
+	if e == "spline" and ka.st.kind == kb.st.kind and not sameSpot(ka.st, kb.st) then
 		local f0, f3 = order[lo - 1], order[hi + 1]
 		local s0 = f0 and tr.keys[f0].st or ka.st
 		local s3 = f3 and tr.keys[f3].st or kb.st
@@ -842,6 +888,34 @@ function SA.StateAt(ent, tr, frame)
 	return a
 end
 
+-- (b0.2.7, the tween machine) the pose an object takes at a frame for one tween step, worked out from
+-- the keys before and after it: "prev" / "next" blend toward that key, "relax" toward the middle of
+-- the two, "push" away from the middle (the pose's own distance from it, s more) and "pull" toward
+-- it. s is the strength (1 = the whole way). nil when the track has no prop pose around the frame.
+function SA.TweenPose(ent, tr, frame, kind, s)
+	local cur = resolveProp(ent, tr, frame)
+	if not cur or cur.kind ~= "prop" then return nil end
+	local prevF, nextF
+	for _, f in ipairs(tr.order) do
+		if f < frame then prevF = f end
+		if f > frame and not nextF then nextF = f end
+	end
+	local prevS = prevF and tr.keys[prevF] and tr.keys[prevF].st
+	local nextS = nextF and tr.keys[nextF] and tr.keys[nextF].st
+	if not prevS or prevS.kind ~= "prop" then prevS = nil end
+	if not nextS or nextS.kind ~= "prop" then nextS = nil end
+	-- with one side missing, the other side stands for both
+	prevS = prevS or nextS or cur
+	nextS = nextS or prevS
+	local mid = blendProp(prevS, nextS, 0.5)
+	if kind == "prev" then return blendProp(cur, prevS, s) end
+	if kind == "next" then return blendProp(cur, nextS, s) end
+	if kind == "relax" then return blendProp(cur, mid, s) end
+	if kind == "push" then return blendProp(mid, cur, 1 + s) end
+	if kind == "pull" then return blendProp(mid, cur, 1 - s) end
+	return nil
+end
+
 -- Keyed attaching (see attState): does the track switch it at all (its keys disagree)?
 local function attSig(att)
 	if att == nil then return nil end
@@ -949,8 +1023,34 @@ local function applyAuxParts(ent, tr, frame)
 end
 
 -- A track at the frame frame -> object
+-- (b0.2.7) the distance a vehicle's body has travelled along its own forward by the keys, from the first
+-- frame to this one (the poses between keys as playback takes them). Worked out frame by frame once per
+-- track (its stamp), so scrubbing back and forth adds nothing twice. S.RigPlace rolls the wheels by it.
+function S.TravelAt(ent, tr, frame)
+	local c = tr.travel
+	if not c or c.stamp ~= (tr.stamp or 0) or c.n ~= #tr.order then
+		c = { stamp = tr.stamp or 0, n = #tr.order, cum = { [0] = 0 }, last = 0 }
+		tr.travel = c
+	end
+	frame = math.max(0, math.floor(frame + 0.5))
+	while c.last < frame do
+		local g = c.last
+		local s0, s1 = resolveProp(ent, tr, g), resolveProp(ent, tr, g + 1)
+		local d = 0
+		if s0 and s1 and s0.kind == "prop" and s1.kind == "prop" and s1.pos and s1.ang then
+			d = (s1.pos - s0.pos):Dot(s1.ang:Forward())
+		end
+		c.cum[g + 1] = c.cum[g] + d
+		c.last = g + 1
+	end
+	return c.cum[frame] or 0
+end
+
 local function applyTrack(ent, tr, frame, noFace)
 	if #tr.order == 0 then return end
+	-- a vehicle's wheels roll with its travel (S.RigPlace); the rig is read before the body moves
+	local first = tr.keys[tr.order[1]]
+	if first and first.st and first.st.kind == "prop" and S.RigOf(ent) then ent.SPeditor_Travel = S.TravelAt(ent, tr, frame) end
 	attApply(ent, tr, frame)
 	local function camSmooth()
 		if S.IsCamera(ent) and #tr.order > 1 then
@@ -1187,11 +1287,94 @@ local function movingParts(tr)
 end
 
 -- Table of contents for the client: key frames, easing and root position (the path line)
+-- (b0.2.7, TobyCat) the elements a key of an object changes: position and turn, scale, flexes, look,
+-- skin and bodygroups, eyes, physics bodies, attachment; a camera's lens, shake and effects; a light's
+-- colour and fields; an effect's moment. A key's mask has a bit per element (SA.EL_ORDER) set when the
+-- element differs from the key before it (or when the first key has it). Bone keys have their own rows.
+local function sigOf(v)
+	if v == nil then return "-" end
+	if isvector(v) then return string.format("%.3f,%.3f,%.3f", v.x, v.y, v.z) end
+	if isangle(v) then return string.format("%.3f,%.3f,%.3f", v.p, v.y, v.r) end
+	if istable(v) then
+		-- by hand: a key of a table may hold vectors and angles, which a JSON dump cannot write
+		local keys = {}
+		for k in pairs(v) do keys[#keys + 1] = k end
+		table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+		local out = {}
+		for _, k in ipairs(keys) do out[#out + 1] = tostring(k) .. "=" .. sigOf(v[k]) end
+		return "{" .. table.concat(out, ";") .. "}"
+	end
+	return tostring(v)
+end
+
+local function physSig(phys)
+	if not istable(phys) then return "-" end
+	local idx = {}
+	for i in pairs(phys) do idx[#idx + 1] = i end
+	table.sort(idx)
+	local out = {}
+	for _, i in ipairs(idx) do out[#out + 1] = i .. ":" .. sigOf(phys[i].p) .. sigOf(phys[i].a) end
+	return table.concat(out, ";")
+end
+
+local function elementSigs(st)
+	local out = {}
+	if not istable(st) or st.only then return out end
+	if st.kind == "prop" then
+		out.pos = sigOf(st.pos) .. sigOf(st.ang)
+		if istable(st.bones) and next(st.bones) then out.bones = sigOf(st.bones) end
+		if st.scale ~= nil then out.scale = sigOf(st.scale) end
+		if istable(st.flex) and next(st.flex) then out.flex = sigOf(st.flex) end
+		if st.mat ~= nil or st.col ~= nil or st.stretch ~= nil then
+			out.look = sigOf(st.mat) .. sigOf(st.sub) .. sigOf(st.tints) .. sigOf(st.stretch) .. sigOf(st.col)
+		end
+		if st.skin ~= nil or istable(st.bg) then out.body = sigOf(st.skin) .. sigOf(st.bg) end
+		if st.eye ~= nil then out.eye = sigOf(st.eye) end
+		if istable(st.phys) then out.phys = physSig(st.phys) end
+		if istable(st.att) then out.att = sigOf(st.att.uid) .. sigOf(st.att.code) .. sigOf(st.att.lp) .. sigOf(st.att.la) end
+	elseif st.kind == "camera" then
+		out.pos = sigOf(st.pos) .. sigOf(st.ang)
+		out.lens = sigOf(st.fov)
+		out.shake = sigOf(st.shake) .. sigOf(st.shakerot) .. sigOf(st.shakefreq)
+		if st.fx ~= nil then out.fx = sigOf(st.fx) end
+	elseif st.kind == "light" then
+		out.pos = sigOf(st.pos) .. sigOf(st.ang)
+		out.color = sigOf(st.col)
+		out.light = sigOf(st.bri) .. sigOf(st.radius) .. sigOf(st.fov) .. sigOf(st.on) .. sigOf(st.f)
+	elseif st.kind == "effect" then
+		out.pos = sigOf(st.pos) .. sigOf(st.ang)
+		out.moment = sigOf(st.time) .. sigOf(st.scale) .. sigOf(st.length)
+	elseif st.kind == "face" then
+		out.flex = sigOf(st.flex)
+	end
+	return out
+end
+
+-- frame -> element mask of a track, worked out again when the track changes (its stamp)
+function SA.KeyElements(tr)
+	local stamp = tr.stamp or 0
+	if tr.elStamp == stamp and tr.elMasks and tr.elN == #tr.order then return tr.elMasks end
+	local masks, prev = {}, nil
+	for _, f in ipairs(tr.order) do
+		local cur = elementSigs(tr.keys[f].st)
+		local m = 0
+		for i, id in ipairs(SA.EL_ORDER) do
+			local s = cur[id]
+			if s ~= nil and (prev == nil or prev[id] ~= s) then m = m + 2 ^ (i - 1) end
+		end
+		masks[f] = m
+		prev = cur
+	end
+	tr.elMasks, tr.elStamp, tr.elN = masks, stamp, #tr.order
+	return masks
+end
+
 function SA.SendSummary(ply)
 	local a = anim(ply)
 	local tracks, moving = {}, {}
 	for uid, tr in pairs(a.tracks) do
 		local list = {}
+		local masks = SA.KeyElements(tr)
 		for i, f in ipairs(tr.order) do
 			local k = tr.keys[f]
 			local p = k.st.pos
@@ -1205,7 +1388,7 @@ function SA.SendSummary(ply)
 				for part, e in pairs(k.pe) do t[#t + 1] = part .. "=" .. e end
 				pe = table.concat(t, ",")
 			end
-			list[i] = { f, k.e, math.Round(p.x, 1), math.Round(p.y, 1), math.Round(p.z, 1), only, skip, pe }
+			list[i] = { f, k.e, math.Round(p.x, 1), math.Round(p.y, 1), math.Round(p.z, 1), only, skip, pe, masks[f] or 0 }
 		end
 		tracks[tostring(uid)] = SA.ToPages(list)
 		moving[tostring(uid)] = movingParts(tr)
@@ -2467,6 +2650,19 @@ COMP:NetReceive("Key", function(ply)
 				setKey(ply, ent, pl.f, "linear")
 			end
 			tr = a.tracks[uid]
+		end
+	elseif action == OP.TWEEN then
+		-- (b0.2.7, the tween machine) one step for the object at this frame: str — the kind (prev, next,
+		-- relax, push, pull); arg — its strength, percent. The pose is written as a key at the frame.
+		local ent = S.FindUID(ply, uid)
+		if IsValid(ent) and tr and #tr.order > 0 and not SA.IsFaceTrack(uid) then
+			local pose = SA.TweenPose(ent, tr, frame, str, math.Clamp(arg, 1, 200) / 100)
+			if pose then
+				applyProp(ent, pose, pose, 0)
+				if not setKey(ply, ent, frame, nil) then S.Notice(ply, "#sa_keys_limit", 1) end
+			else
+				S.Notice(ply, "#sa_tw_none", 1)
+			end
 		end
 	elseif action == OP.PRESET then
 		-- "preset|a0,a1,b0,b1,shape[|extra]": arg — the strength, percent; extra — the object's
@@ -3764,6 +3960,24 @@ local function numKeys(t)
 	return out
 end
 
+-- (b0.2.7) the flex weights of an SMH save: by number, or by the flex's name (kept as a string and
+-- found on the model when the key is applied; flexKeyId)
+local function flexKeys(t)
+	local out = {}
+	for k, v in pairs(istable(t) and t or {}) do
+		local n = tonumber(k)
+		if n then out[n] = v elseif isstring(k) and k ~= "" then out[k] = v end
+	end
+	return out
+end
+
+local function flexKeyId(ent, key)
+	if isnumber(key) then return key end
+	for i = 0, ent:GetFlexNum() - 1 do
+		if string.lower(ent:GetFlexName(i) or "") == string.lower(key) then return i end
+	end
+end
+
 -- opts = { start = first frame, fps = SMH frames a second (0 — frame numbers as they are),
 --          world = keep the places of the save (false — move it to where the object stands) }
 local function smhImport(ply, id, src, entName, ent, opts)
@@ -3785,7 +3999,7 @@ local function smhImport(ply, id, src, entName, ent, opts)
 				mods[name] = mods[name] or {}
 				local dd = d
 				if name == "physbones" or name == "bones" then dd = numKeys(d) end
-				if name == "flex" and istable(d) then dd = { Weights = numKeys(d.Weights), Scale = d.Scale } end
+				if name == "flex" and istable(d) then dd = { Weights = flexKeys(d.Weights), Scale = d.Scale } end
 				if name == "bodygroup" then dd = numKeys(d) end
 				table.insert(mods[name], { pos = pos, data = dd, inn = num(fr.EaseIn) or 0, out = num(fr.EaseOut) or 0 })
 			end
@@ -3886,7 +4100,8 @@ local function smhImport(ply, id, src, entName, ent, opts)
 			st.flex = {}
 			for f, w in pairs(fx.Weights) do
 				w = num(w)
-				if w and math.abs(w) > 0.001 and f < ent:GetFlexNum() then st.flex[f] = w end
+				local id = flexKeyId(ent, f)
+				if id and w and math.abs(w) > 0.001 and id < ent:GetFlexNum() then st.flex[id] = w end
 			end
 		end
 		local sk = num(get("skin"))

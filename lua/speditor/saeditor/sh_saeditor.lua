@@ -5,6 +5,9 @@ local SA = COMP.SA
 
 SA.FPS_LIST   = { 12, 15, 24, 30, 60 }
 SA.MAX_FRAMES = 432000          -- animation length in frames, at most (an hour at 120 fps)
+-- (b0.2.7, TobyCat) the elements of an object that have rows of their own in the timeline (a bit each
+-- in the key's element mask, see SA.KeyElements): the order of the bits
+SA.EL_ORDER = { "pos", "bones", "scale", "flex", "look", "body", "eye", "phys", "att", "lens", "shake", "fx", "color", "light", "moment" }
 SA.MAX_KEYS   = 100000          -- keys per object (a baked 12-minute animation has ~10 000)
 -- the kinds of motion from a key to the next one. "spline" (a0.6, the default for new keys) is
 -- continuous: the object passes through a key without stopping, its speed worked out from the
@@ -319,7 +322,7 @@ end
 -- frame = 1 to copy them; they all move together, so a key never lands on one still to move
 -- MOTION (a0.7, the Motion Editor): the edit of the object at frame goes over a time selection,
 -- str = "a0,a1,b0,b1,shape" (full between a1 and b1… see SA.TimeSelWeight)
-SA.OP = { SET = 1, DELETE = 2, MOVE = 3, EASE = 4, CLEAR = 5, CLEAR_ALL = 6, COPY = 7, SHIFT = 8, MOTION = 9, TIME = 10, SPEED = 11, PRESET = 12, BAKE = 13 }
+SA.OP = { SET = 1, DELETE = 2, MOVE = 3, EASE = 4, CLEAR = 5, CLEAR_ALL = 6, COPY = 7, SHIFT = 8, MOTION = 9, TIME = 10, SPEED = 11, PRESET = 12, BAKE = 13, TWEEN = 14 }
 -- the Motion Editor's procedural presets (b0.2, after SFM): they change the keys inside the time selection
 SA.PRESETS = { "smooth", "sharp", "jitter", "hold", "default", "zero", "half", "one", "in", "out", "ramp",
 	"spline", "drop", "release", "round", "steady", "stagger", "paste", "playhead" }
@@ -790,6 +793,13 @@ COMP:Lang("en", {
 	-- a0.5: face keys, frame sets in the render
 	sa_face_key = "Set a face key for the selection (Shift+K): the face gets its own keys, apart from the body",
 	sa_hk_face_key = "Set a face key for the selection", sa_face_row = "Face",
+	sa_el_pos = "Position and turn", sa_el_bones = "Bones", sa_el_scale = "Scale", sa_el_flex = "Flexes", sa_el_look = "Material and colour",
+	sa_el_body = "Skin and bodygroups", sa_el_eye = "Eyes", sa_el_phys = "Physics bodies", sa_el_att = "Attachment",
+	sa_el_lens = "Lens", sa_el_shake = "Shake", sa_el_fx = "Camera effects", sa_el_color = "Colour", sa_el_light = "Light",
+	sa_el_moment = "Moment",
+	sa_tw_menu = "Tween the selection here", sa_tw_prev = "Toward the previous key", sa_tw_next = "Toward the next key",
+	sa_tw_relax = "Relax (toward the middle of the two keys)", sa_tw_push = "Push (away from the middle)", sa_tw_pull = "Pull (toward the middle)",
+	sa_tw_done = "Tween keyed at frame %d", sa_tw_none = "No keys around this frame to tween from",
 	sa_hk_delete_keys = "Delete the selected keys", sa_eyes_row = "Eyes",
 	sa_face_start = "Separate face keys: start here", sa_face_clear = "Remove the face keys (the body keys drive the face again)",
 	sa_face_key_set = "Face key set: frame %d", sa_need_face = "Select a model with a face (flexes)",
@@ -1157,6 +1167,13 @@ COMP:Lang("ru", {
 	-- a0.5: ключи лица, наборы кадров в рендере
 	sa_face_key = "Поставить ключ лица выделенному (Shift+K): у лица свои ключи, отдельно от тела",
 	sa_hk_face_key = "Поставить ключ лица выделенному", sa_face_row = "Лицо",
+	sa_el_pos = "Место и поворот", sa_el_bones = "Кости", sa_el_scale = "Масштаб", sa_el_flex = "Флексы", sa_el_look = "Материал и цвет",
+	sa_el_body = "Скин и бодигруппы", sa_el_eye = "Глаза", sa_el_phys = "Физика", sa_el_att = "Прикрепление",
+	sa_el_lens = "Объектив", sa_el_shake = "Тряска", sa_el_fx = "Эффекты камеры", sa_el_color = "Цвет", sa_el_light = "Свет",
+	sa_el_moment = "Момент",
+	sa_tw_menu = "Твин выделенного здесь", sa_tw_prev = "К предыдущему ключу", sa_tw_next = "К следующему ключу",
+	sa_tw_relax = "Релакс (к середине между ключами)", sa_tw_push = "Push (от середины)", sa_tw_pull = "Pull (к середине)",
+	sa_tw_done = "Твин записан на кадре %d", sa_tw_none = "Рядом с кадром нет ключей для твина",
 	sa_hk_delete_keys = "Удалить выбранные ключи", sa_eyes_row = "Глаза",
 	sa_face_start = "Отдельные ключи лица: начать здесь", sa_face_clear = "Убрать ключи лица (лицом снова управляют ключи тела)",
 	sa_face_key_set = "Ключ лица поставлен: кадр %d", sa_need_face = "Выделите модель с лицом (флексами)",

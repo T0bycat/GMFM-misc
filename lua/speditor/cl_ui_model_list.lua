@@ -61,14 +61,18 @@ function UI.StartModelScan()
 		local t0 = SysTime()
 		while #queue > 0 and SysTime() - t0 < 0.004 do
 			local dir = table.remove(queue)
-			local files, dirs = file.Find(dir .. "*", "GAME")
-			for _, f in ipairs(files or {}) do
-				if string.sub(f, -4) == ".mdl" then
-					local path = dir .. f
-					if not isUseless(path) then index[#index + 1] = path end
+			-- (b0.2.7) one folder or one name that breaks the scan must not stop the browser
+			local ok, err = pcall(function()
+				local files, dirs = file.Find(dir .. "*", "GAME")
+				for _, f in ipairs(files or {}) do
+					if string.sub(f, -4) == ".mdl" then
+						local path = dir .. f
+						if not isUseless(path) then index[#index + 1] = path end
+					end
 				end
-			end
-			for _, d in ipairs(dirs or {}) do queue[#queue + 1] = dir .. d .. "/" end
+				for _, d in ipairs(dirs or {}) do queue[#queue + 1] = dir .. d .. "/" end
+			end)
+			if not ok then ErrorNoHalt("[GM:FM] model scan: " .. tostring(err) .. "\n") end
 		end
 		if #queue == 0 then
 			scanDone = true
@@ -357,7 +361,9 @@ function UI.BuildBrowser()
 			return
 		end
 		s2.SPWant, s2.SPLoading = nil, nil
-		s2:SetModel(want.model)
+		-- (b0.2.7) a model the preview cannot show must not break the browser's Think
+		local ok, err = pcall(s2.SetModel, s2, want.model)
+		if not ok then ErrorNoHalt("[GM:FM] model preview: " .. tostring(err) .. "\n") end
 	end
 	preview.PaintOver = function(s2, w, h)
 		if not s2.SPLoading then return end

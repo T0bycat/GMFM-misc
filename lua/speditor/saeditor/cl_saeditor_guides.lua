@@ -185,6 +185,19 @@ UI.AddGuide({ id = "sa_keys", order = 10, icon = "icon16/key.png", title = { en 
 	{ "see", "sa_marks", "bookmarks, play modes (once / loop / bounce), the shot list", "закладки, режимы воспроизведения (раз / круг / туда-обратно), список планов" },
 	{ "see", "first_anim", "a first animation from start to video", "первая анимация от начала до видео" },
 	{ "see", "sa_curves", "how objects move between keys, smooth motion", "как объект движется между ключами, плавность" },
+	{ "see", "sa_elements", "the element tracks of an object (double click its name)", "дорожки элементов объекта (двойной клик по имени)" },
+	{ "see", "sa_tween", "the tween machine: a step between the keys", "твин: шаг между ключами" },
+} })
+
+-- (b0.2.7, TobyCat) the element tracks of an object, opened by a double click on its name in the timeline
+UI.AddGuide({ id = "sa_elements", order = 10.3, icon = "icon16/key.png", title = { en = "Timeline: element tracks", ru = "Таймлайн: дорожки элементов" }, blocks = {
+	{ "p", "Double click an object's name on the timeline to open its element tracks: one row for every part that the object's keys change. The parts are position and turn, bones, scale, flexes, material and colour, skin and bodygroups, eyes, physics, attachment, lens, camera shake and effects, light and the moment of an effect. Double click the name again to close them.",
+		"Двойной клик по имени объекта на таймлайне открывает его дорожки элементов: по строке на каждую часть, которую меняют ключи объекта. Части: место и поворот, кости, масштаб, флексы, материал и цвет, скин и бодигруппы, глаза, физика, прикрепление, объектив, тряска и эффекты камеры, свет и момент эффекта. Двойной клик по имени закрывает их." },
+	{ "img", "speditor/help/tl_elements.jpg", "The element tracks of a character: the keys of each part (position, scale, flexes, material, skin).",
+		"Дорожки элементов персонажа: ключи каждой части (место, масштаб, флексы, материал, скин)." },
+	{ "p", "A row shows only the keys that change its part. A click on one of its keys moves the playhead to that frame. The keys are still edited on the object's row: a key holds the whole pose, so moving it moves all its parts together. Keys for each part on their own are not in this version.",
+		"Строка показывает только ключи, которые меняют её часть. Клик по одному из её ключей переносит курсор на его кадр. Сами ключи правятся на строке объекта: ключ хранит всю позу целиком, поэтому его перенос двигает все части вместе. Отдельных ключей на каждую часть в этой версии нет." },
+	{ "see", "sa_keys", "the keys and the timeline", "ключи и таймлайн" },
 } })
 
 UI.AddGuide({ id = "sa_curves", order = 11, icon = "icon16/chart_curve.png", title = { en = "How objects move between keys (curves)", ru = "Как объект движется между ключами (кривые)" }, blocks = {
@@ -491,6 +504,9 @@ UI.AddGuide({ id = "sa_rec", order = 12.5, icon = "icon16/webcam.png", title = {
 	{ "h", "Physics: what falls", "Физика: что падает" },
 	{ "p", "The Physics button records the selected props and ragdolls (all of them when nothing is selected) with their physics, with the editor open or closed. Models without physics (a prop with bones, most SFM and TF2 characters) and objects attached to a bone have nothing to fall with: they are left out, and the editor says how many. One take holds up to 32 objects. The Physics choice in the Record window is for the game takes.",
 		"Кнопка «Физика» записывает выбранные пропы и ragdoll (а если ничего не выбрано — все) вместе с их физикой, при открытом и закрытом редакторе. Модели без физики (проп с костями, большинство персонажей SFM и TF2) и объекты, привязанные к кости, падать не могут: их пропускаем, и редактор говорит, сколько пропущено. В одной записи до 32 объектов. Выбор «Физика» в окне записи относится к игровым takes." },
+	{ "h", "Player model", "Модель игрока" },
+	{ "p", "Record → Player model: type a model path such as models/player/kleiner.mdl and the player in a gameplay take has that model. Empty keeps your own model. Another addon may force its own model on spawn. Player skin: the skin number of that model for the take (0, 1, 2…); empty keeps the model's own skin.",
+		"Запись → Модель игрока: введите путь к модели, например models/player/kleiner.mdl, и игрок в игровом take будет с этой моделью. Пусто — своя модель. Другой аддон может навязать свою модель при появлении. Скин игрока: номер скина этой модели для take (0, 1, 2…); пусто — свой скин модели." },
 } })
 
 UI.AddGuide({ id = "sa_face", order = 14, icon = "icon16/emoticon_smile.png", title = { en = "Faces and lip sync", ru = "Лица и липсинк" }, blocks = {
@@ -622,6 +638,9 @@ UI.AddGuide({ id = "sa_smh", order = 18, icon = "icon16/arrow_switch.png", title
 			"«Записать сохранение SMH» записывает выделенные объекты как сохранение, которое загрузит SMH." } },
 	{ "see", "adopt", "your dupes and saves", "свои дупы и сейвы" },
 	{ "result", "Old SMH animations continue in SAeditor, and back.", "Старые анимации SMH продолжаются в SAeditor — и обратно." },
+	{ "h", "Face poser motion from SMH", "Движение face poser из SMH" },
+	{ "p", "The face sliders of a Stop Motion Helper save are matched by the flex name as well as by number, so a face poser motion saved in SMH keys the face of the model in GM:FM.",
+		"Ползунки лица из сохранения Stop Motion Helper находят флекс и по имени, и по номеру, поэтому движение face poser, записанное в SMH, ставит ключи лицу модели в GM:FM." },
 } })
 
 ---------------------------------------------------------------------
@@ -1043,4 +1062,13 @@ UI.AddGuide({ id = "sa_rec_npcs", order = 12.6, section = "anim", icon = "icon16
 	{ "tip", "In the GM:FM gamemode this is how NPCs get into a take — there is no spawn menu. In Sandbox it works the same, next to the spawn menu.",
 		"В режиме GM:FM только так NPC и попадают в дубль — меню спавна там нет. В Sandbox всё работает так же, вместе с меню спавна." },
 	{ "try", "Open NPCs of the take", "Открыть «NPC дубля»", fn = function() SA.OpenNPCPicker() end },
+} })
+
+-- (b0.2.7, n3wtun) the tween machine: a step of the selected objects toward or away from the keys around a frame
+UI.AddGuide({ id = "sa_tween", order = 10.6, icon = "icon16/arrow_switch.png", title = { en = "Tween machine: between the keys", ru = "Твин: между ключами" }, blocks = {
+	{ "p", "A pose that is almost right does not need to be posed again. Move the playhead between two keys, select the objects, then right click the object's row → Tween the selection here. The steps: toward the previous key, toward the next key, relax (toward the middle of the two keys), push (away from the middle, the pose gets more of its own shape) and pull (back toward the middle). Each one at 25, 50 or 100 %.",
+		"Почти правильную позу не нужно ставить заново. Переведите курсор между двумя ключами, выделите объекты и правым кликом по строке объекта выберите Твин выделенного здесь. Шаги: к предыдущему ключу, к следующему ключу, релакс (к середине между двумя ключами), push (от середины: поза приобретает больше собственной формы) и pull (обратно к середине). Каждый шаг на 25, 50 или 100 %." },
+	{ "p", "A step writes a key at the playhead, so the result plays like any key and Undo takes it back. The steps work on the objects' bodies (position, turn, bones, flexes); a face track is tweened by its own keys.",
+		"Шаг записывает ключ на курсоре, поэтому результат проигрывается как любой ключ, а Отмена его убирает. Шаги работают с телом объекта (место, поворот, кости, флексы); лицо твинится своими ключами." },
+	{ "see", "sa_keys", "the keys and the timeline", "ключи и таймлайн" },
 } })

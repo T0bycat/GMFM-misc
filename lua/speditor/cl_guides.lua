@@ -108,6 +108,12 @@ UI.AddGuide({ id = "adopt", order = 1.7, icon = "icon16/world_add.png", title = 
 	{ "see", "sa_smh", "bring over Stop Motion Helper animations", "перенести анимации Stop Motion Helper" },
 	{ "result", "Your old work inside the scene, ready to be animated and rendered.", "Ваши прежние работы внутри сцены — их можно анимировать и рендерить." },
 	{ "try", "Take objects from the map…", "Взять объекты с карты…", fn = function() UI.OpenAdopt() end },
+	{ "h", "NPCs too", "NPC тоже" },
+	{ "p", "Take objects from the map lists NPCs as well. Each one becomes a ragdoll of the scene in its place, with the same model and skin, and the NPC itself is removed from the map. The ragdoll is a posing copy: it rests in its default pose.",
+		"«Взять объекты с карты» показывает и NPC. Каждый становится регдоллом сцены на своём месте, с той же моделью и скином, а сам NPC убирается с карты. Регдолл — копия для позирования: он в позе покоя по умолчанию." },
+	{ "h", "Dupes from the game", "Дюпы из игры" },
+	{ "p", "File → Import dupe lists the duplicator files of garrysmod/data/duplicator/ (the game saves a dupe there). Pick one: its objects appear where you look, as scene objects, with their constraints and modifiers. Put your own dupe files in that folder and they show up at once.",
+		"Файл → Импорт дюпа показывает файлы дюпликатора из garrysmod/data/duplicator/ (туда игра сохраняет дюпы). Выберите файл: его объекты появятся там, куда вы смотрите, как объекты сцены, со своими связями и модификаторами. Свои файлы дюпов положите в эту папку — они сразу появятся в списке." },
 } })
 
 UI.AddGuide({ id = "posing", order = 2, icon = "icon16/arrow_rotate_clockwise.png", title = { en = "Posing: move, turn, IK, stretch, locks", ru = "Позирование: перенос, поворот, IK, растяжение, замки" }, blocks = {
@@ -325,6 +331,9 @@ UI.AddGuide({ id = "lights", order = 3, icon = "icon16/lightbulb.png", title = {
 	{ "see", "render", "soft shadows in the render", "мягкие тени в рендере" },
 	{ "result", "Lighting with soft shadows and a shape of your own — the mask decides what the light paints on the walls.",
 		"Освещение с мягкими тенями и своей формой — маска решает, какой рисунок свет кладёт на стены." },
+	{ "h", "Look from this light", "Смотреть из этого света" },
+	{ "p", "Right click the light → Look from this light: the work camera moves to the light and looks the way it shines, with the field of view of a spot. If a camera view is open (Look through), close it first.",
+		"ПКМ по свету → Смотреть из этого света: рабочая камера встаёт на место света и смотрит туда, куда он светит, с углом обзора прожектора. Если открыт вид через камеру, сначала закройте его." },
 } })
 
 UI.AddGuide({ id = "own_sounds", order = 8.5, icon = "icon16/sound.png", title = { en = "Your own sounds: interface, notifications, timeline", ru = "Свои звуки: интерфейс, уведомления, таймлайн" }, blocks = {
@@ -501,6 +510,9 @@ UI.AddGuide({ id = "interface", order = 0.5, icon = "icon16/application_view_til
 		"Окна → Опорное видео открывает окно, которое проигрывает ролик. Скопируйте файлы .webm или .mov в папку, которая показана в окне («Копировать путь к папке» кладёт путь в буфер обмена), выберите ролик в списке — он играет рядом с редактором, и движение можно повторить без переключения окон. После копирования новых файлов нажмите «Обновить список». Здесь играют WebM и MOV (H.264)." },
 	{ "img", "speditor/help/ref_menu.jpg", "Top bar: Windows → Reference video (between Model Browser and Render).", "Верхняя панель: Окна → Опорное видео (между Model Browser и Render)." },
 	{ "img", "speditor/help/ref_window.jpg", "The window: choose a clip in the list, it plays beside the editor. Refresh list after you copy new files.", "Окно: выберите ролик в списке, он играет рядом с редактором. «Обновить список» — после копирования новых файлов." },
+	{ "h", "Reference video follows the timeline", "Опорное видео следует за таймлайном" },
+	{ "p", "Start at the playhead: the clip starts from the frame the playhead is on and plays in step with the editor frame and the Play button. Press the button again (Stop following the timeline) to play the clip on its own.",
+		"«Начать с текущего кадра»: ролик стартует с кадра, на котором стоит курсор, и идёт вместе с кадром редактора и кнопкой «Играть». Нажмите кнопку снова («Не следовать за таймлайном»), чтобы ролик играл сам по себе." },
 } })
 
 UI.AddGuide({ id = "first_anim", order = 1.2, icon = "icon16/film_go.png", title = { en = "Step by step: map to video", ru = "Шаг за шагом: от карты до видео" }, blocks = {

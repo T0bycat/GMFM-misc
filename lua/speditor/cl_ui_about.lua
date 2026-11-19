@@ -25,6 +25,8 @@ surface.CreateFont("SPeditor.Title", { font = "Tahoma", size = 34, weight = 800,
 
 -- Skins bundled with the editor as themes: their authors' pages in the Steam Workshop
 local WORKSHOP = "https://steamcommunity.com/sharedfiles/filedetails/?id="
+-- (b0.3) the fork several improvements of this version come from
+local MISC_URL = "https://github.com/T0bycat/GMFM-misc"
 local SKIN_LINKS = {
 	{ name = "EcoUI",                 author = "ELuminumG24",       id = "3255386124" },
 	{ name = "Dark UI Spawnmenu",     author = "AquaRex",           id = "888392108" },
@@ -79,11 +81,11 @@ local SA = function() return SPeditor.Component("saeditor").SA end
 local function page(id) return function() if not Dock.ShowPage(id) then SPeditor.Notify("#about_link_closed", 0) end end end
 local function topMenu(key) return function() UI.OpenTopMenu(key) end end
 UI.NewsLinks = {
-	-- GMFM-Misc b0.2.6-misc.1
-	about_misc1_2 = { guides = { "posing" }, open = { { "win_ase", page("ase") } } },
-	about_misc1_3 = { guides = { "posing" } },
-	about_misc1_4 = { guides = { "sa_keys" } },
-	about_misc1_5 = { guides = { "sa_keys", "sa_curves" } },
+	-- b0.3: improvements from the GMFM-Misc fork
+	about_b03_2 = { guides = { "posing" }, open = { { "win_ase", page("ase") } } },
+	about_b03_3 = { guides = { "posing" } },
+	about_b03_4 = { guides = { "sa_keys" } },
+	about_b03_5 = { guides = { "sa_keys", "sa_curves" } },
 	about_y1 = { guides = { "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
 	about_y2 = { guides = { "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
 	about_y3 = { guides = { "sa_face" }, open = { { "sa_snd_title", function() SA().OpenSounds() end } } },
@@ -110,6 +112,17 @@ UI.NewsLinks = {
 	about_y24 = { guides = { "attach" }, open = { { "win_ase", page("ase") } } },
 	about_y25 = { guides = { "sa_bones", "attach" }, open = {} },
 	about_y26 = { guides = { "sa_face", "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
+	about_z1 = { guides = { "interface" }, open = { { "menu_windows", topMenu("menu_windows") } } },
+	about_z2 = { guides = { "lights" }, open = { { "win_ase", page("ase") } } },
+	about_z3 = { guides = { "adopt" }, open = { { "win_ase", page("ase") } } },
+	about_z4 = { guides = { "sa_rec" }, open = { { "sa_rec_title", function() SA().OpenRecord() end } } },
+	about_z5 = { guides = { "sa_keys" }, open = {} },
+	about_z6 = { guides = { "effects" }, open = { { "win_effects", function() UI.ToggleEffects() end } } },
+	about_z7 = { guides = { "interface" }, open = {} },
+	about_z8 = { guides = { "adopt" }, open = { { "win_ase", page("ase") } } },
+	about_z9 = { guides = { "sa_smh" }, open = {} },
+	about_z10 = { guides = { "sa_elements" }, open = {} },
+	about_z11 = { guides = { "sa_tween" }, open = {} },
 	about_x1 = { guides = { "attach" }, open = { { "win_ase", page("ase") } } },
 	about_x2 = { guides = { "sa_bones" }, open = { { "sa_timeline", page("sa_timeline") } } },
 	about_x3 = { guides = { "posing" }, open = { { "menu_view", topMenu("menu_view") } } },
@@ -176,6 +189,15 @@ function UI.OpenAbout()
 		link:SetSize(UI.S(110), UI.S(22))
 		link.DoClick = function() gui.OpenURL(github) end
 	end
+	-- (b0.3) a credit to the fork whose improvements are in this version
+	local fork = vgui.Create("DButton", head)
+	fork:SetPos(12 + ICON_SIZE + 16 + 120, 106)
+	fork:SetText("GMFM-Misc")
+	fork:SetIcon("icon16/world_link.png")
+	fork:SetTooltip(L("about_fork_hint"))
+	UI.StyleButton(fork)
+	fork:SetSize(UI.S(110), UI.S(22))
+	fork.DoClick = function() gui.OpenURL(MISC_URL) end
 
 	local foot = vgui.Create("DPanel", body)
 	foot:Dock(BOTTOM)
@@ -478,72 +500,6 @@ function UI.ShowRenderDone(info)
 	text(scroll, L("files_steam"), COL.DIM, nil, 12)
 	return win
 end
-
----------------------------------------------------------------------
--- Native Linux (GMFM-Misc): the game's Linux build draws the editor's effects through its own
--- shader translation, and small differences remain; under Proton the Windows build runs
--- (system.IsWindows() is true there, so this never shows). Once a session, when the editor opens,
--- until "Don't warn me again" (gmfm_linux_notice 0). gmfm_linux_notice_show opens it anywhere.
----------------------------------------------------------------------
-local cvLinuxNotice = CreateClientConVar("gmfm_linux_notice", "1", true, false,
-	"Native Linux: recommend running Garry's Mod through Proton when the editor opens")
-local linuxNoticeShown = false
-function UI.ShowLinuxNotice()
-	local old = Dock.ByKey("linuxnotice")
-	if IsValid(old) then old:Remove() end
-	local W = 520
-	local win, body = Dock.Create({ key = "linuxnotice", id = "linuxnotice", title = L("linux_title"), w = W, h = 250,
-			x = math.floor(ScrW() / 2 - W / 2), y = 160, dockable = false, icon = "icon16/information.png" })
-	win.minW, win.minH = UI.S(420), UI.S(220)
-	local baseRemove = win.OnRemove
-	win.OnRemove = function(s)
-		if baseRemove then baseRemove(s) end
-		Dock.pages.linuxnotice = nil
-	end
-
-	local foot = vgui.Create("DPanel", body)
-	foot:Dock(BOTTOM)
-	foot:SetTall(UI.S(34))
-	foot.Paint = function() end
-	local ok = vgui.Create("DButton", foot)
-	ok:Dock(RIGHT)
-	ok:DockMargin(4, 5, 8, 5)
-	ok:SetWide(UI.S(90))
-	ok:SetText(L("linux_ok"))
-	UI.StyleButton(ok, true, 3)
-	ok.DoClick = function() win:Remove() end
-	local never = vgui.Create("DButton", foot)
-	never:Dock(RIGHT)
-	never:DockMargin(4, 5, 4, 5)
-	never:SetWide(UI.S(170))
-	never:SetText(L("linux_never"))
-	UI.StyleButton(never, nil, 3)
-	never.DoClick = function()
-		cvLinuxNotice:SetBool(false)
-		win:Remove()
-	end
-
-	local scroll = vgui.Create("DScrollPanel", body)
-	scroll:Dock(FILL)
-	scroll.Paint = function(_, w, h)
-		surface.SetDrawColor(COL.BG)
-		surface.DrawRect(0, 0, w, h)
-	end
-	text(scroll, L("linux_text"), COL.TEXT, nil, 10)
-	text(scroll, L("linux_how"), COL.ORANGE, nil, 10)
-	return win
-end
-
-SPeditor.Hook("SPeditor_StateChanged", "GMFM.LinuxNotice", function(on)
-	if not on or linuxNoticeShown or not system.IsLinux() or not cvLinuxNotice:GetBool() then return end
-	linuxNoticeShown = true
-	-- after the editor's own windows are built, so it opens over them
-	timer.Simple(1, function()
-		if C.active then UI.ShowLinuxNotice() end
-	end)
-end)
-
-concommand.Add("gmfm_linux_notice_show", function() UI.ShowLinuxNotice() end)
 
 ---------------------------------------------------------------------
 -- Work camera settings

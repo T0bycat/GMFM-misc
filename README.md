@@ -3,174 +3,45 @@
 <h1 align="center">GMFM-Misc</h1>
 
 <p align="center">
-Random improvements to <a href="https://github.com/DikiyChuvak/GMFM">GM:FM — Garry's Mod Filmmaker</a>.<br>
-An unofficial fork of DikiyChuvak/GMFM, based on b0.2.6. Current version: <b>b0.2.6-misc.1</b>.
+An unofficial fork of <a href="https://github.com/DikiyChuvak/GMFM">GM:FM — Garry's Mod Filmmaker</a>, for fixes and experiments.<br>
+<b>Right now it is the same as upstream b0.3.</b>
 </p>
 
 <p align="center">
-<a href="https://github.com/T0bycat/GMFM-misc/issues"><b>Issues (this fork)</b></a> ·
-<a href="https://github.com/DikiyChuvak/GMFM">Upstream GM:FM</a> ·
-<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435">Original on the Workshop</a> ·
+<a href="https://github.com/DikiyChuvak/GMFM"><b>Upstream GM:FM</b></a> ·
+<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435">GM:FM on the Workshop</a> ·
+<a href="https://github.com/T0bycat/GMFM-misc/issues">Issues (this fork)</a> ·
 <a href="LICENSE">MIT</a>
 </p>
 
-<p align="center"><img src="materials/speditor/help/overview.jpg" alt="GM:FM editor"></p>
+## Nothing different right now
 
-GM:FM is DikiyChuvak's scene, animation and film editor for Garry's Mod, close to a full port
-of Source Filmmaker. GMFM-Misc takes it as a base and adds fixes and features as they come
-up: Linux support, the timeline, auto key, posing. It is **not** the Workshop version, and the
-upstream author doesn't support it. Report problems with it
-[here](https://github.com/T0bycat/GMFM-misc/issues), not upstream.
+Everything GMFM-Misc added (Linux fixes, the timeline's per-bone rows and body-part groups,
+partial auto keys, the Finger Poser, Auto pose, faster playback, the `gmfm_prof` profiler and the
+smaller fixes) is now part of **GM:FM b0.3**. Thanks to DikiyChuvak for taking it in.
 
-How to use the editor is explained inside the game: **Help → How to use**.
+This branch has the same files as upstream b0.3, so there is no reason to install it instead of the
+real thing. **Get GM:FM from the [Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435)
+or from [DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM)**, and report problems with it there.
 
-## What's different from upstream
+**Check back from time to time.** New fixes and experiments will show up here first, and this page
+will list what differs from upstream when there is something.
 
-### Linux
-
-> **On Linux, we recommend running Garry's Mod through Proton.** In Steam, right-click Garry's
-> Mod → Properties → Compatibility → *Force the use of a specific Steam Play compatibility tool*,
-> and pick a Proton version. The game then runs its Windows build, and GM:FM's effects look as
-> they do on Windows. The native Linux game works with the fixes below, but small rendering
-> differences remain that make some shots look off.
-
-- SSAO and film grain no longer close the game. The shaders were rebuilt without the branches
-  the Linux shader translation refused.
-- The render targets the Linux game can't draw to were replaced: SSAO reads depth packed into
-  8-bit passes, and the shaders also ship under a second name that the Linux game loads.
-- SSAO depth on Linux is smoothed without banding on most surfaces. Floors seen at a grazing
-  angle can still show faint bands.
-- `gmfm_shadertest` and `gmfm_rendertest` test the editor's shaders and render targets one by one.
-- On native Linux the editor says once, when it opens, that Proton looks best (OK / Don't warn me
-  again; `gmfm_linux_notice 0` turns it off).
-
-### Timeline
-- Double-click a track to open it out into a row per moving bone, face slider, or camera /
-  light / effect attribute (FOV, colour…). A key dragged on one of those rows moves only that part.
-- A character's bone rows sit in folding groups by body part: Body, Left arm, Left hand (a group
-  per finger), Left leg… and Other. A group's row holds the keys of all its bones, and a key dragged
-  there moves them together. Shift + click on an arrow opens or folds everything under it, and the
-  group of a selected bone opens by itself. Skeletons without hands or feet get a group per branch.
-- Drag over empty space to box-select keys (no Shift needed). **X** deletes the selected keys.
-- Press and drag on the frame numbers to scrub the playhead.
-
-### Performance
-- Playing or scrubbing characters with per-bone keys no longer lags. On a smooth stretch between
-  keys, each bone now blends only its own value instead of the whole pose of the four keys around
-  it, once per bone. In a test scene the playback's work went from about 10 ms to about 1 ms per
-  server tick, and the frame time during playback from about 21 ms to about 8 ms (in single
-  player the server runs inside the game).
-- `gmfm_prof 1` turns on a profiler for scenes that play choppily: every 2 seconds
-  (`gmfm_prof 1 <seconds>` to change that) it reports the editor's time per frame and per server
-  tick, the worst frame, its hooks, playback and timeline drawing, and its net messages. Reports go
-  to the console and to `data/speditor/prof_client.txt` / `prof_server.txt`. `gmfm_prof 0` turns
-  it off.
-
-### Auto key
-- Keys only what you changed: the moved bones, the edited face sliders, the camera's or
-  light's edited attribute.
-- A slider is keyed as soon as you let it go. A camera field edit is no longer lost to the next
-  edit, and an edit is keyed at its own frame even if you scrub right after it.
-- A camera's **Record moves** no longer sets a key when playback pauses.
-- The editors work with these partial keys: the Graph Editor draws and edits each channel
-  between the keys that hold it, and the Motion Editor, presets and Camera Smooth handle them too.
-- The Bone keys toggle is gone: **K** always keys the whole pose. A single bone's key is on its
-  row's right-click menu.
-
-### Fingers
-- Select a hand or a finger bone and the Finger Poser shows at the top of the controls: GMod's
-  hand picture and values, a Curl slider, and presets (Flat, Point, Fist, Thumbs up, mirror,
-  other hand). Hands are found by GMod Finger Poser's bone names (HL2, TF2 / SFM, Portal…) or by
-  the bone tree.
-- With IK on, moving a finger's last joint bends the whole finger; several finger joints selected
-  bend together.
-
-### Auto pose
-- **Auto pose** (the button next to IK on the viewport bar, or `gmfm_autopose`): pull a ragdoll's hand past the arm's reach and the
-  body follows. The torso bends and turns toward the hand, then the body steps along the floor
-  or down into a crouch. Planted feet and hands stay where they are.
-- On a biped (two legs with IK chains on the hips, and a spine up to a head), Auto pose works on
-  the rest of the body too:
-  - **A foot** pulled past the leg's reach: the hips turn toward it around the standing hip, and
-    the chest stays upright.
-  - **The hips** moved: the body goes along. Planted feet stay, and the hips stop where the legs no
-    longer reach. The upper body leans the other way to keep its balance.
-  - **The chest, neck or head** moved: the spine and hips bend toward it, and the hips shift back
-    as far as the bend allows. A dragged head keeps looking where it looked.
-  - **Turned with the rotate rings:** the hips twist and the chest turns back part of the way. A
-    turned chest or head shares the turn with the bodies below it. The trackball turns as before.
-  - Other skeletons (four legs, no head) keep the plain drag.
-- `gmfm_autopose_follow 0..1` sets how much the body follows (0 turns all of it off). Right-click IK or Auto pose for
-  one menu with IK, Auto pose, feet planted and hands planted.
-
-### Viewports
-- Right / middle / Alt navigation in the Secondary Viewport flies the camera it shows, keyed
-  as in the Primary.
-
-### Fixes
-- A pause in the middle of a drag no longer splits one edit into two undo steps.
-- Graph Editor: deleting or moving a key on one bone's curves no longer takes every bone's key
-  at that frame.
-- Lights and effects edited by their sliders: auto key keys only the attributes that changed.
-- A scene keeps the map's sounds muted; the gizmo's World button no longer looks off at first.
-- Help → Report a problem and the About window lead to this fork's GitHub, not upstream.
-
-## Install
-
-1. Unsubscribe from GM:FM on the Workshop. Two copies of the addon clash.
-2. Clone this repository into `garrysmod/addons/` as a folder called **`speditor`**. The name
-   matters, because the shaders and themes are looked for there:
-
-   ```
-   cd "<Steam>/steamapps/common/GarrysMod/garrysmod/addons"
-   git clone https://github.com/T0bycat/GMFM-misc.git speditor
-   ```
-
-3. Start Garry's Mod. In Sandbox: C menu → GM:FM, or `gmfm_toggle`. For the gamemode: Start New
-   Game → **GM:FM**.
-
-Lua autorefresh works for the files in `lua/`. A new file is picked up after
-`lua/autorun/speditor_init.lua` is touched.
-
-## What is where
-
-| Path | What |
-|---|---|
-| `lua/autorun/speditor_init.lua` | loads everything: the lists `SHARED`, `SERVER_FILES`, `CLIENT_FILES` |
-| `lua/speditor/sh_*.lua` | shared: settings (`sh_config`), languages (`sh_lang`), errors and reports, components |
-| `lua/speditor/sv_*.lua` | server: objects, scenes, adopting map objects, PAC3, the Environment, the gamemode |
-| `lua/speditor/cl_*.lua` | client: camera, gizmo, IK and auto pose, rig, render (`cl_render`, `cl_export`, `cl_ssao`, `cl_postfx`), lights, effects, the interface (`cl_ui_*`), guides, self-test |
-| `lua/speditor/saeditor/` | SAeditor, the animation component: tracks and keys, timeline, graph editor, sounds and lip sync, recorder, video |
-| `lua/speditor/skins/` | Derma skins of the themes (GM:FM UI is `sfm.lua`) |
-| `lua/entities/` | the editor's lights, cameras and effects |
-| `gamemodes/gmfm/` | the GM:FM gamemode |
-| `materials/`, `sound/`, `data_static/` | pictures, interface sounds, example scenes |
-| `shaders_src/` → `shaders/fxc/` | HLSL sources of the SSAO, grain and colour correction shaders and their compiled `.vcs` (`shaders_src/build_vcs.py`; compile with `fxc /T ps_2_b`) |
-| `tools/` | `build_gma.py` (the addon package), picture generators |
-
-### Build a package
-
-`python3 tools/build_gma.py out.gma` writes the GMA itself (the game's Linux `gmad` refuses
-`shaders/fxc/*.vcs`), skipping what `addon.json` → `ignore` lists.
-
-## Contributing
-
-Issues and pull requests for this fork go to
-[T0bycat/GMFM-misc](https://github.com/T0bycat/GMFM-misc). For the official GM:FM, see
-[DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM) and its
-[Workshop page](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435).
+The fork's earlier release stays on the
+[`b0.2.6-misc.1`](https://github.com/T0bycat/GMFM-misc/releases/tag/b0.2.6-misc.1) tag.
 
 ## Credits
 
 GM:FM is made by [DikiyChuvak](https://github.com/DikiyChuvak). The Simplified Chinese
-translation is by [fugui9527121](https://github.com/fugui9527121). GMFM-Misc only adds to their work.
+translation is by [fugui9527121](https://github.com/fugui9527121).
 
 ## Русский
 
-GMFM-Misc — неофициальный форк [GM:FM](https://github.com/DikiyChuvak/GMFM) (на основе
-b0.2.6) с разными исправлениями и дополнениями. Это не версия из мастерской Steam. Об ошибках
-этого форка пишите [сюда](https://github.com/T0bycat/GMFM-misc/issues), а не автору GM:FM.
-Полное описание на русском — в [README оригинала](https://github.com/DikiyChuvak/GMFM#русский).
+GMFM-Misc — неофициальный форк [GM:FM](https://github.com/DikiyChuvak/GMFM) для исправлений и
+экспериментов. Всё, что было в форке, вошло в **GM:FM b0.3**, и сейчас эта ветка совпадает с ней.
+Ставьте GM:FM из [мастерской Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435)
+или с [DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM). Загляните сюда позже: новые
+исправления и эксперименты появятся здесь.
 
 ## License / Лицензия
 

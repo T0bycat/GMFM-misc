@@ -640,6 +640,28 @@ function UI.Open()
 			end)
 		end):SetIcon("icon16/disk.png")
 		m:AddOption(L("load_scene") .. "…", function() Dock.ShowPage("scene") end):SetIcon("icon16/folder_go.png")
+		-- (b0.2.7) a duplicator file of the game (data/duplicator/…) placed where the player looks
+		local dupes = m:AddSubMenu(L("dupe_import"))
+		dupes:SetIcon("icon16/page_white_copy.png")
+		local found = {}
+		for _, f in ipairs(file.Find("duplicator/*.txt", "DATA")) do found[#found + 1] = "duplicator/" .. f end
+		for _, d in ipairs(file.Find("duplicator/*", "DATA")) do
+			if d ~= "." and d ~= ".." and not string.find(d, "%.") then
+				for _, f in ipairs(file.Find("duplicator/" .. d .. "/*.txt", "DATA")) do found[#found + 1] = "duplicator/" .. d .. "/" .. f end
+			end
+		end
+		table.sort(found)
+		if #found == 0 then
+			dupes:AddOption(L("dupe_none"))
+		end
+		for i = 1, math.min(#found, 60) do
+			local path = found[i]
+			dupes:AddOption(string.gsub(path, "^duplicator/", ""), function()
+				net.Start(Net.ImportDupe)
+				net.WriteString(path)
+				net.SendToServer()
+			end)
+		end
 		m:AddOption(L("act_render") .. "…", function() UI.OpenRenderDialog() end):SetIcon("icon16/picture_save.png")
 		-- b0.2.6: SFM's Export Poster — a still refined pass by pass
 		m:AddOption(L("poster_title") .. "…", function() UI.OpenPoster() end):SetIcon("icon16/picture.png")

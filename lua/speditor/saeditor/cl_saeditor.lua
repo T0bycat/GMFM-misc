@@ -137,7 +137,9 @@ SA.ReceiveParts("Summary", function(t)
 				pe = pe or {}
 				pe[part] = e
 			end
-			keys[i] = { f = k[1], e = k[2], pos = Vector(k[3] or 0, k[4] or 0, k[5] or 0), only = set(k[6]), skip = set(k[7]), pe = pe }
+			keys[i] = { f = k[1], e = k[2], pos = Vector(k[3] or 0, k[4] or 0, k[5] or 0), only = set(k[6]), skip = set(k[7]), pe = pe,
+							-- the elements this key changes (b0.2.7, TobyCat): a bit per SA.EL_ORDER entry
+							el = tonumber(k[9]) or 0 }
 		end
 		tracks[tonumber(uid)] = keys
 	end
@@ -452,6 +454,31 @@ function SA.SetKey(ents, frame, quiet, parts)
 		return
 	end
 	if not quiet then SPeditor.Notify(parts and ("#sa_bone_key_set|" .. frame) or ("#sa_key_set|" .. frame), 3) end
+end
+
+-- (b0.2.7, the tween machine) one step for the objects at a frame, between the keys around it: kind
+-- "prev", "next", "relax", "push" or "pull"; pct — its strength in percent. The server writes the pose
+-- as a key; one undo step takes back all of them.
+function SA.Tween(kind, pct, ents, frame)
+	ents = ents or C.SelectionList()
+	if #ents == 0 then
+		SPeditor.Notify("#sa_need_sel", 0)
+		return
+	end
+	frame = math.floor((frame or SA.frame) + 0.5)
+	C.FlushQueue()
+	local id = nextOp()
+	local n = 0
+	for _, e in ipairs(ents) do
+		local uid = SA.UID(e)
+		if uid ~= 0 and IsValid(e) and not C.IsAux(e) then
+			sendKey(id, SA.OP.TWEEN, uid, frame, pct, kind)
+			n = n + 1
+		end
+	end
+	if n == 0 then return end
+	pushHistory("sa tween", id)
+	SPeditor.Notify("#sa_tw_done|" .. frame, 3)
 end
 
 -- A key of the face only (Shift+K). The first one starts the object's face track: from then

@@ -3,13 +3,14 @@
 SPeditor = SPeditor or {}
 SPeditor.Name     = "GM:FM"
 SPeditor.FullName = "Garry's Mod Filmmaker"
-SPeditor.Version = "b0.2.6-misc.1" -- GMFM-Misc: upstream's version it builds on, then the fork's own release
+SPeditor.Version = "b0.3"
 SPeditor.VersionBase = "b0.2"   -- the release the patch builds on: About lists its news under the patch's
-SPeditor.VersionPrev = "b0.2.6" -- the patch before this one
+SPeditor.VersionPrev = "b0.2.7" -- the patch before this one
 -- every update since b0.1, newest first: version, release date, prefix of its news in the
 -- language files (About → What's new, b0.2.4)
 SPeditor.History = {
-	{ "b0.2.6-misc.1", "2026-11-16", "about_misc1_" },   -- GMFM-Misc
+	{ "b0.3", "2026-11-19", "about_b03_" },
+	{ "b0.2.7", "2026-11-05", "about_z" },
 	{ "b0.2.6", "2026-10-31", "about_y" },
 	{ "b0.2.5", "2026-10-28", "about_x" },
 	{ "b0.2.4", "2026-10-24", "about_w" },
@@ -19,8 +20,8 @@ SPeditor.History = {
 	{ "b0.2",   "2026-10-21", "about_n" },
 	{ "b0.1",   "2026-10-20", "about_v01_" },
 }
-SPeditor.GitHub  = "https://github.com/T0bycat/GMFM-misc"     -- address of the addon page (GMFM-Misc) (empty: the About window shows a caption instead of a link)
-SPeditor.BugsURL = "https://github.com/T0bycat/GMFM-misc/issues/new"   -- a new issue on GMFM-Misc's GitHub (Help → Report a problem)
+SPeditor.GitHub  = "https://github.com/DikiyChuvak/GMFM"     -- address of the addon page (empty: the About window shows a caption instead of a link)
+SPeditor.BugsURL = "https://steamcommunity.com/workshop/filedetails/discussion/3817852435/567048683131023614/"   -- "Bug Report and ideas" (Help → Report a problem)
 
 SPeditor.Net = {
 	Toggle        = "SPeditor_Toggle",
@@ -72,6 +73,7 @@ SPeditor.Net = {
 	AdoptList     = "SPeditor_AdoptList",
 	AdoptListData = "SPeditor_AdoptListData",
 	Adopt         = "SPeditor_Adopt",
+	ImportDupe    = "SPeditor_ImportDupe",   -- (b0.2.7) a duplicator file from data/duplicator/ (sv_adopt.lua)
 	PAC           = "SPeditor_PAC",        -- PAC3 outfits of scene objects (sv_pac.lua, cl_pac.lua)
 	PACSync       = "SPeditor_PACSync",
 	Env           = "GMFM_Env",            -- the lighting of the whole map (sv_env.lua, cl_env.lua)

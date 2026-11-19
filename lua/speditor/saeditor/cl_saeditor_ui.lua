@@ -38,6 +38,8 @@ local function round(v) return math.floor(v + 0.5) end
 -- a key picked on the row of a bone (bone keys): it stands for that bone's part of the key
 SA.selKeys = SA.selKeys or {}
 local function isSel(uid, f, parts) return SA.selKeys[uid .. ":" .. f .. ":" .. (parts or "")] ~= nil end
+-- (b0.2.7, TobyCat) the objects whose element tracks are open: a double click on the object's name
+SA.elOpen = SA.elOpen or {}
 local function setSel(uid, f, on, parts)
 	SA.selKeys[uid .. ":" .. f .. ":" .. (parts or "")] = on and { uid = uid, f = f, parts = parts } or nil
 end
@@ -422,6 +424,7 @@ local function buildTimeline(page)
 	timer.Simple(0, function() if IsValid(tl) then applyMode() end end)
 	local rows, rowsAt = {}, 0
 	local scroll = 0
+	local nameClick = { uid = 0, t = 0 }   -- the last click on an object's name (double click, b0.2.7)
 	local drag            -- { kind = "scrub" } | { kind = "keys", from, to, lo, hi, … } | { kind = "box", x0, y0, x1, y1 } | sound
 
 	-- the keys of a track that hold any of the parts "p3,b14"
@@ -645,6 +648,36 @@ local function buildTimeline(page)
 		end
 		-- the rows of one object: its track, the selected bone, its face; always = a row even
 		-- without keys (an object of a track, a selected object: a key can be set there)
+		-- (b0.2.7, TobyCat) the element tracks of an object that is open: one row per element its keys
+		-- change (SA.EL_ORDER); a row shows those keys. A key is one whole pose, so the keys are edited on
+		-- the object's row; here a click only moves the playhead
+		local function elementRows(ent, uid, indent)
+			if not SA.elOpen[uid] then return end
+			local list = SA.tracks[uid] or {}
+			-- the keys of each element are sorted out once for a track: the summary makes a new list
+			-- when the track changes, and the rows are rebuilt twice a second while it plays
+			local c = SA.elCache and SA.elCache[uid]
+			if not c or c.src ~= list then
+				c = { src = list, byEl = {} }
+				SA.elCache = SA.elCache or {}
+				SA.elCache[uid] = c
+				for i in ipairs(SA.EL_ORDER) do
+					local bit = 2 ^ (i - 1)
+					local keys = {}
+					for _, k in ipairs(list) do
+						if k.el and math.floor(k.el / bit) % 2 == 1 then keys[#keys + 1] = k end
+					end
+					c.byEl[i] = keys
+				end
+			end
+			for i, id in ipairs(SA.EL_ORDER) do
+				local keys = c.byEl[i]
+				if #keys > 0 then
+					rows[#rows + 1] = { elRow = true, el = id, uid = uid, ent = ent, name = L("sa_el_" .. id), keys = keys, indent = indent }
+				end
+			end
+		end
+
 		local function objectRows(ent, name, always, indent)
 			local uid = SA.UID(ent)
 			if uid == 0 or seen[uid] then return end
@@ -657,6 +690,8 @@ local function buildTimeline(page)
 			local first = #rows + 1
 			rows[first] = { uid = uid, ent = ent, name = name, keys = SA.tracks[uid] or {}, indent = indent,
 				canExpand = canExpand, expanded = expanded }
+			-- (b0.2.7, TobyCat) the element rows stay right under the object
+			elementRows(ent, uid, indent)
 			if C.IsAux(ent) then
 				if expanded then attrRows(ent, uid) end
 			else
@@ -1181,6 +1216,12 @@ local function buildTimeline(page)
 					end
 				end
 				clip(false)
+			elseif row.elRow then
+				-- an element track of the object above (b0.2.7): the keys that change this element
+				surface.SetDrawColor(COL.DIM)
+				surface.DrawRect(20, y + 2, 1, RH / 2 - 2)
+				surface.DrawRect(20, y + RH / 2, 8, 1)
+				draw.SimpleText(row.name, "SPeditor.Small", 32, y + RH / 2, COL.TEXT, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 			elseif row.bone then
 				-- a bone of the object above (a face slider: of the Face row above, one step further in;
 				-- a bone in a group: a step further in per group)
@@ -1468,6 +1509,20 @@ local function buildTimeline(page)
 		-- the face of a body row: its own keys
 		if not row.face and not row.bone and IsValid(row.ent) and not C.IsAux(row.ent) and row.ent:GetFlexNum() > 0 and not SA.HasFaceTrack(row.ent) then
 			m:AddOption(L("sa_face_start") .. "  (" .. frame .. ")", function() SA.SetFaceKey({ row.ent }, frame) end):SetIcon("icon16/emoticon_smile.png")
+		end
+		-- (b0.2.7, the tween machine) a step toward or away from the keys around this frame, for the
+		-- selected objects (or this row's object when nothing is selected)
+		if not row.face and not row.bone and not row.elRow and IsValid(row.ent) and not C.IsAux(row.ent) then
+			local tw = m:AddSubMenu(L("sa_tw_menu"))
+			for _, kind in ipairs({ "prev", "next", "relax", "push", "pull" }) do
+				local sub = tw:AddSubMenu(L("sa_tw_" .. kind))
+				for _, pct in ipairs({ 25, 50, 100 }) do
+					sub:AddOption(pct .. " %", function()
+						local list = C.SelectionList()
+						SA.Tween(kind, pct, #list > 0 and list or { row.ent }, frame)
+					end)
+				end
+			end
 		end
 		-- copied keys go back onto their own tracks, the first of them at this frame
 		local clip = {}
@@ -1869,6 +1924,24 @@ local function buildTimeline(page)
 					C.Select(row.ent, -1)
 				end
 				if code == MOUSE_RIGHT then rowMenu(row, round(SA.frame)) end
+				-- (b0.2.7, TobyCat) a double click on an object's name opens or closes its element tracks
+				if code == MOUSE_LEFT and row.uid > 0 and not row.face and not row.bone and not row.elRow then
+					if nameClick.uid == row.uid and RealTime() - nameClick.t < 0.4 then
+						SA.elOpen[row.uid] = (not SA.elOpen[row.uid]) or nil
+						nameClick = { uid = 0, t = 0 }
+						rowsAt = 0
+					else
+						nameClick = { uid = row.uid, t = RealTime() }
+					end
+				end
+			end
+			return
+		end
+		-- (b0.2.7, TobyCat) an element track: a click moves the playhead to its key, nothing is edited here
+		if row and row.elRow then
+			if code == MOUSE_LEFT and mx >= NAME_W and not SA.rendering then
+				local ek = keyAt(row, mx, w)
+				SA.Seek(ek and ek.f or round(frameAt(mx, w)))
 			end
 			return
 		end

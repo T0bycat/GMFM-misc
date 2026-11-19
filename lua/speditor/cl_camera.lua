@@ -627,6 +627,25 @@ function C.StopViewCamera()
 	hook.Run("SPeditor_ViewChanged", nil)
 end
 
+-- (b0.2.7, asked on the Workshop) the work view is where a light is and looks the way it shines:
+-- the light's place and turn, its field of view when it is a spot
+function C.LookFromLight(ent)
+	if not C.IsLight(ent) then return end
+	local cam = C.camera
+	if IsValid(cam.viewEnt) then
+		SPeditor.Notify("#look_from_light_busy", 1)
+		return
+	end
+	local p, a = SPeditor.LivePos(ent)
+	cam.pos = Vector(p.x, p.y, p.z)
+	cam.angles = Angle(a.p, a.y, a.r)
+	cam.ang = cam.angles
+	cam.target = p + a:Forward() * 100
+	cam.targetAngles = Angle(a.p, a.y, a.r)
+	local fov = tonumber(ent:GetLightFOV()) or 0
+	C.SetWorkFOV(fov > 0 and fov or 75)
+end
+
 function C.MatchCameraToWork(ent)
 	if not C.IsCamera(ent) then return end
 	local pos, ang = C.GetWorkCamera()

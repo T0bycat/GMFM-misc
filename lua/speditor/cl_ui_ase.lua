@@ -1319,6 +1319,7 @@ function UI.BuildASE(body)
 
 		if C.IsAux(ent) then
 			m:AddOption(L("aim_at"), function() C.OpenAimMenu(ent) end)
+			if C.IsLight(ent) then m:AddOption(L("look_from_light"), function() C.LookFromLight(ent) end):SetIcon("icon16/lightbulb.png") end
 			if C.IsCamera(ent) then
 				m:AddOption(L("look_through"), function() C.StartViewCamera(ent) end)
 				m:AddOption(L("match_cam_work"), function() C.MatchCameraToWork(ent) end)
