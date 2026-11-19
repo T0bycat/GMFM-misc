@@ -468,7 +468,14 @@ local function buildTimeline(page)
 				ids[#ids + 1] = i
 			end
 		end
-		table.sort(ids, function(x, y) return (ent:GetFlexName(x) or "") < (ent:GetFlexName(y) or "") end)
+		-- (sfm-faces) a right / left / multi set sorts by its shared name, so the halves stay together
+		local sortKey = {}
+		for _, i in ipairs(ids) do
+			local name = ent:GetFlexName(i) or ""
+			local side, _, base = C.FlexSideOf(name)
+			sortKey[i] = side and (base .. "\1" .. C.FlexSideRank[side]) or string.lower(name)
+		end
+		table.sort(ids, function(x, y) return sortKey[x] < sortKey[y] end)
 		-- (b0.2.6-misc.1) where the eyes look: a row of its own at the top
 		if string.find(str or "", "e0", 1, true) then partRow(ent, fid, "e0", L("sa_eyes_row"), nil, true) end
 		for _, i in ipairs(ids) do partRow(ent, fid, "f" .. i, ent:GetFlexName(i) or ("#" .. i), nil, true) end
