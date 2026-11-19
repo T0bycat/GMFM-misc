@@ -1,4 +1,4 @@
-<p align="center"><img src="materials/speditor/icon128.png" width="96" alt="GM:FM"></p>
+<p align="center"><img src=".github/gmfm-misc-icon.png" width="96" alt="GMFM-Misc"></p>
 
 <h1 align="center">GMFM-Misc</h1>
 
@@ -16,11 +16,26 @@ An unofficial fork of <a href="https://github.com/DikiyChuvak/GMFM">GM:FM — Ga
 
 ## Nothing different right now
 
-Everything GMFM-Misc added (Linux fixes, the timeline's per-bone rows and body-part groups,
-partial auto keys, the Finger Poser, Auto pose, faster playback, the `gmfm_prof` profiler and the
-smaller fixes) is now part of **GM:FM b0.3**. Thanks to DikiyChuvak for taking it in.
+Everything GMFM-Misc added is now part of **GM:FM b0.3**. Thanks to DikiyChuvak for taking it in.
 
-This branch has the same files as upstream b0.3, so there is no reason to install it instead of the
+What came from this fork:
+
+- **Linux:** SSAO and film grain no longer crash the native Linux game; `gmfm_shadertest` and
+  `gmfm_rendertest`.
+- **Timeline:** a track opens out into a row per bone, face slider or attribute, with bones grouped
+  by body part; box-select keys, **X** to delete them, scrub on the frame numbers.
+- **Auto key:** keys only what changed (bones, sliders, camera / light attributes), and the
+  editors handle these partial keys.
+- **Finger Poser:** in the controls when a hand or finger is selected, with Curl and presets; with
+  IK on, a fingertip bends the whole finger.
+- **Auto pose:** drag a hand, foot, the hips, chest or head and the body follows, with planted
+  feet and hands staying put.
+- **Performance:** playback of per-bone keys about 10× lighter on the server; `gmfm_prof` profiler.
+- **Fixes:** the Secondary Viewport's camera can be flown; undo steps not split by a pause; Graph
+  Editor keys of one bone no longer take the others'; the model browser no longer freezes on
+  large models; the editor follows a change of resolution.
+
+This branch has the same code as upstream b0.3, so there is no reason to install it instead of the
 real thing. **Get GM:FM from the [Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3817852435)
 or from [DikiyChuvak/GMFM](https://github.com/DikiyChuvak/GMFM)**, and report problems with it there.
 
